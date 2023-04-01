@@ -30,3 +30,24 @@ class LeducHoldemCFRModel(Model):
         '''
         return [self.agent, self.agent]
 
+class UnoCFRModel(Model):
+    ''' A pretrained model on UNO with CFR (chance sampling)
+    '''
+    
+    def __init__(self):
+        ''' Load pretrained model
+        '''
+        env = rlcard.make('uno')
+        self.agent = CFRAgent(env, model_path=os.path.join(ROOT_PATH, 'uno_cfr'))
+        self.agent.load()
+    @property
+    def agents(self):
+        ''' Get a list of agents for each position in a the game
+
+        Returns:
+            agents (list): A list of agents
+
+        Note: Each agent should be just like RL agent with step and eval_step
+              functioning well.
+        '''
+        return [self.agent, self.agent]

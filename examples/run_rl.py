@@ -57,8 +57,8 @@ def train(args):
 
     # Start training
     with Logger(args.log_dir) as logger:
+        counter = 0
         for episode in range(args.num_episodes):
-
             if args.algorithm == 'nfsp':
                 agents[0].sample_episode_policy()
 
@@ -109,6 +109,7 @@ if __name__ == '__main__':
             'mahjong',
             'no-limit-holdem',
             'uno',
+            'uno2',
             'gin-rummy',
             'bridge',
         ],

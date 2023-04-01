@@ -41,8 +41,8 @@ class UnoCard:
         if isinstance(cards, str):
             cards = [cards]
         for i, card in enumerate(cards):
-            if card == 'draw':
-                trait = 'Draw'
+            if card == 'draw' or card == 'pass':
+                trait = card.capitalize()
             else:
                 color, trait = card.split('-')
                 if trait == 'skip':
@@ -56,7 +56,7 @@ class UnoCard:
                 elif trait == 'wild_draw_4':
                     trait = 'Wild-Draw-4'
 
-            if trait == 'Draw' or (trait[:4] == 'Wild' and not wild_color):
+            if trait == 'Draw' or trait == 'Pass' or (trait[:4] == 'Wild' and not wild_color):
                 print(trait, end='')
             elif color == 'r':
                 print(colored(trait, 'red'), end='')

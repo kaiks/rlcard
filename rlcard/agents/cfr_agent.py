@@ -62,6 +62,8 @@ class CFRAgent():
         state_utility = np.zeros(self.env.num_players)
         obs, legal_actions = self.get_state(current_player)
         action_probs = self.action_probs(obs, legal_actions, self.policy)
+        # print('RL agent legal actions', legal_actions)
+
 
         for action in legal_actions:
             action_prob = action_probs[action]

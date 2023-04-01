@@ -70,6 +70,7 @@ class UnoRound:
         if trait == 'wild' or trait == 'wild_draw_4':
             for index, card in enumerate(player.hand):
                 if trait == card.trait:
+                    card.color = color
                     remove_index = index
                     break
         else:

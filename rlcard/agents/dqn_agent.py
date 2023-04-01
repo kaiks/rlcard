@@ -180,6 +180,7 @@ class DQNAgent(object):
         
         q_values = self.q_estimator.predict_nograd(np.expand_dims(state['obs'], 0))[0]
         masked_q_values = -np.inf * np.ones(self.num_actions, dtype=float)
+        #print('DQN agent legal actions', state['legal_actions'])
         legal_actions = list(state['legal_actions'].keys())
         masked_q_values[legal_actions] = q_values[legal_actions]
 

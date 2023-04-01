@@ -25,10 +25,12 @@ class HumanAgent(object):
         '''
         print(state['raw_obs'])
         _print_state(state['raw_obs'], state['action_record'])
-        action = int(input('>> You choose action (integer): '))
-        while action < 0 or action >= len(state['legal_actions']):
-            print('Action illegel...')
-            action = int(input('>> Re-choose action (integer): '))
+        raw_input = input('>> Choose action (integer): ')
+        # make sure the input is an integer
+        while not raw_input.isdigit() or int(raw_input) < 0 or int(raw_input) >= len(state['legal_actions']):
+            print('Action illegal...')
+            raw_input = input('>> Re-choose action (integer): ')
+        action = int(raw_input)
         return state['raw_legal_actions'][action]
 
     def eval_step(self, state):
@@ -58,17 +60,17 @@ def _print_state(state, action_record):
         _print_action(pair[1])
         print('')
 
-    print('\n=============== Your Hand ===============')
+    print('\n=============== Your Hand ({} cards) ==============='.format(len(state['hand'])))
     UnoCard.print_cards(state['hand'])
-    print('')
-    print('=============== Last Card ===============')
+    print('\n=============== Last Card ===============')
     UnoCard.print_cards(state['target'], wild_color=True)
-    print('')
-    print('========== Players Card Number ===========')
+    print('\n========== Players Card Number ===========')
     for i in range(state['num_players']):
-        if i != state['current_player']:
+        if i == state['current_player']:
+            print('Player {} has {} cards. (You)'.format(i, state['num_cards'][i]))
+        else:
             print('Player {} has {} cards.'.format(i, state['num_cards'][i]))
-    print('======== Actions You Can Choose =========')
+    print('\n======== Actions You Can Choose =========')
     for i, action in enumerate(state['legal_actions']):
         print(str(i)+': ', end='')
         UnoCard.print_cards(action, wild_color=True)

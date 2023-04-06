@@ -68,6 +68,7 @@ if __name__ == '__main__':
             'mahjong',
             'no-limit-holdem',
             'uno',
+            'uno2',
             'gin-rummy',
         ],
     )
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         '--models',
         nargs='*',
         default=[
-            'experiments/uno_dqn_result/model.pth',
+            'experiments/uno2_dqn_result/model.pth',
             'random',
         ],
     )

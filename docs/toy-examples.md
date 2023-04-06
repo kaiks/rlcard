@@ -781,3 +781,36 @@ You may also do it reversely by running
 ```
 python3 examples/evaluate.py --env doudizhu --models doudizhu-rule-v1 experiments/dmc_result/doudizhu/1_432758400.pth experiments/dmc_result/doudizhu/2_432758400.pth --cuda 0 --num_games 1000
 ```
+
+
+### Uno useful commands
+
+Train uno on nfsp:
+```
+python3 examples/run_rl.py --env uno2 --num_episodes 200 --algorithm nfsp --log_dir experiments/uno2_nfsp_result/
+```
+
+Train uno on dqn:
+```
+python3 examples/run_rl.py --env uno2 --num_episodes 200 --algorithm dqn --log_dir experiments/uno2_dqn_result/
+```
+
+Evaluate uno on nfsp:
+```
+python3 examples/evaluate.py --env uno2 --models experiments/uno2_nfsp_result/model.pth --num_games 1000
+```
+
+Evaluate uno on dqn:
+```
+python3 examples/evaluate.py --env uno2 --models experiments/uno2_dqn_result/model.pth --num_games 1000
+```
+
+Evaluate uno on nfsp vs random:
+```
+python3 examples/evaluate.py --env uno2 --models experiments/uno2_nfsp_result/model.pth random --num_games 1000
+```
+
+Evaluate uno on dqn vs random:
+```
+python3 examples/evaluate.py --env uno2 --models experiments/uno2_dqn_result/model.pth random --num_games 1000
+```

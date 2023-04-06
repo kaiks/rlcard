@@ -126,16 +126,32 @@ def encode_target(plane, target):
     plane[color][trait] = 1
     return plane
 
-def encode_war_stack(plane, war_stack):
+def encode_enemy_hand_size(plane, enemy_hand_size):
+    ''' Encode enemy hand size and represerve it into plane
+
+    Args:
+        plane (array): 4*15 numpy array
+        enemy_hand_size (int): number of cards in enemy's hand
+
+    Returns:
+        (array): 4*15 numpy array
+    '''
+    # sets as many first elements of the plane to 1 as enemy hand size
+    for _ in range(enemy_hand_size // 2):
+        plane[0][enemy_hand_size%15] = 1
+    return plane
+
+def encode_war_stack(plane, war_stack, played_wd4):
     ''' Encode war stack and represent it as plane
 
     Args:
-        plane (array): 1*4*15 numpy array
+        plane (array): 4*15 numpy array
         war_stack (int): number of cards in the war stack
 
     Returns:
-        (array): 1*4*15 numpy array
+        (array): 4*15 numpy array
     '''
+    plane[2][0] = played_wd4
     for _ in range(war_stack):
-        plane[war_stack//15][war_stack%15] = 1
+        plane[3][war_stack%15] = 1
     return plane

@@ -104,6 +104,8 @@ class UnoGame:
         state['num_players'] = self.get_num_players()
         state['current_player'] = self.round.current_player
         state['war_stack_size'] = self.dealer.war_stack_size
+        state['played_wild_4'] = self.dealer.played_wild_4
+        state['enemy_hand_size'] = len(self.players[1 - player_id].hand) # TODO: generalize
         return state
 
     def get_payoffs(self):

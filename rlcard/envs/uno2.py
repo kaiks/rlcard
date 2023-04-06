@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from rlcard.envs import Env
 from rlcard.games.uno2 import Game
-from rlcard.games.uno2.utils import encode_hand, encode_target, encode_war_stack
+from rlcard.games.uno2.utils import encode_hand, encode_target, encode_war_stack, encode_enemy_hand_size
 from rlcard.games.uno2.utils import ACTION_SPACE, ACTION_LIST
 from rlcard.games.uno2.utils import cards2list
 
@@ -25,7 +25,8 @@ class UnoEnv(Env):
         obs = np.zeros((5, 4, 15), dtype=int)
         encode_hand(obs[:3], state['hand'])
         encode_target(obs[3], state['target'])
-        encode_war_stack(obs[4], state['war_stack_size'])
+        encode_enemy_hand_size(obs[4], state['enemy_hand_size'])
+        encode_war_stack(obs[4], state['war_stack_size'], state['played_wild_4'])
         legal_action_id = self._get_legal_actions()
         extracted_state = {'obs': obs, 'legal_actions': legal_action_id}
         extracted_state['raw_obs'] = state

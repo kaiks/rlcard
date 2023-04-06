@@ -32,6 +32,7 @@ class UnoRound:
         top = self.dealer.flip_top_card()
         if top.trait == 'wild':
             top.color = self.np_random.choice(UnoCard.info['color'])
+            top.str = top.get_str()
         self.target = top
         self.played_cards.append(top)
         return top
@@ -76,7 +77,10 @@ class UnoRound:
             for index, card in enumerate(player.hand):
                 if trait == card.trait:
                     card.color = color
+                    card.str = card.get_str()
                     remove_index = index
+                    # debug print card properties:
+                    #print(f"card color: {card.color}, card trait: {card.trait}")
                     break
         else:
             for index, card in enumerate(player.hand):
@@ -84,6 +88,8 @@ class UnoRound:
                     remove_index = index
                     break
         card = player.hand.pop(remove_index)
+        #if card.trait == 'wild' or card.trait == 'wild_draw_4':
+            #print(f"card color: {card.color}, card trait: {card.trait}")
         if not player.hand:
             self.is_over = True
             self.winner = [self.current_player]
@@ -116,10 +122,10 @@ class UnoRound:
                     if self.dealer.war_stack_size == 0:
                         legal_actions.extend(WILD)
             elif card.color == target.color or card.trait == target.trait:
-                if self.dealer.war_stack_size == 0 or (card.is_war_playable() and (card.trait == 'reverse' or self.dealer.played_wild_4 == False)):
+                if self.dealer.war_stack_size == 0 or (card.is_war_playable() and (card.trait != 'draw_2' or self.dealer.played_wild_4 == False)):
                     legal_actions.append(card.str)
         # print war stack size and legal actions for debugging
-        # print('war stack size: ', self.dealer.war_stack_size)
+        #print('war stack size: ', self.dealer.war_stack_size)
         # print('legal actions: ', legal_actions)
         # remove duplicate actions
         [legal_actions.remove(action) for action in legal_actions if legal_actions.count(action) > 1]
@@ -203,6 +209,9 @@ class UnoRound:
         current = self.current_player
         direction = self.direction
         num_players = self.num_players
+        
+        # if card.trait == 'wild' or card.trait == 'wild_draw_4':
+        #     print('wild card: ', card.str)
 
         # perform reverse card
         if card.trait == 'reverse':

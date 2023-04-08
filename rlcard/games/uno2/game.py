@@ -118,7 +118,7 @@ class Uno2Game:
         '''
         winner = self.round.winner
         if winner is not None and len(winner) == 1:
-            self.payoffs[winner[0]] = 1 - self.round.turn / 1000
+            self.payoffs[winner[0]] = 1 - self.round.turn / 5000
             if self.payoffs[winner[0]] < 0:
                 self.payoffs[winner[0]] = 0
             self.payoffs[1 - winner[0]] = -1

@@ -11,6 +11,7 @@ class UnoDealer:
         self.war_stack_size = 0
         self.played_wild_4 = False
         self.shuffle()
+        self.starting_cards = 7
 
     def shuffle(self):
         ''' Shuffle the deck

@@ -28,11 +28,13 @@ class UnoGame:
                 (dict): The first state in one game
                 (int): Current player's id
         '''
+        self.starting_cards = cards
         # Initalize payoffs
         self.payoffs = [0 for _ in range(self.num_players)]
 
         # Initialize a dealer that can deal cards
         self.dealer = Dealer(self.np_random)
+        self.dealer.starting_cards = 7
 
         # Initialize four players to play the game
         self.players = [Player(i, self.np_random) for i in range(self.num_players)]
@@ -116,8 +118,11 @@ class UnoGame:
         '''
         winner = self.round.winner
         if winner is not None and len(winner) == 1:
-            self.payoffs[winner[0]] = 1
+            self.payoffs[winner[0]] = 1 - self.turn / 1000
             self.payoffs[1 - winner[0]] = -1
+        else:
+            # assign the payoff -1 to all players
+            self.payoffs = [-1 for _ in range(self.num_players)]
         return self.payoffs
 
     def get_legal_actions(self):

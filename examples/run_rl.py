@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--num_eval_games',
         type=int,
-        default=2000,
+        default=100,
     )
     parser.add_argument(
         '--evaluate_every',

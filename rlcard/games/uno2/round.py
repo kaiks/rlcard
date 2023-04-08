@@ -21,6 +21,7 @@ class UnoRound:
         self.is_over = False
         self.winner = None
         self.player_picked_one = False
+        self.turn = 0
 
     def flip_top_card(self):
         ''' Flip the top card of the card pile
@@ -60,6 +61,7 @@ class UnoRound:
             player (object): object of UnoPlayer
             action (str): string of legal action
         '''
+        self.turn += 1
         self.player_picked_one = False
         if action == 'draw':
             self._perform_draw_action(players)

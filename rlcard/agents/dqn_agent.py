@@ -45,7 +45,7 @@ class DQNAgent(object):
     def __init__(self,
                  replay_memory_size=20000,
                  replay_memory_init_size=100,
-                 update_target_estimator_every=1000,
+                 update_target_estimator_every=200,
                  discount_factor=0.99,
                  epsilon_start=1.0,
                  epsilon_end=0.1,
@@ -217,7 +217,7 @@ class DQNAgent(object):
 
         # Update the target estimator
         if self.train_t % self.update_target_estimator_every == 0:
-            self.target_estimator = deepcopy(self.q_estimator)
+            self.target_estimator.soft_update_from(self.q_estimator, 0.01)
             print("\nINFO - Copied model parameters to target network.")
 
         self.train_t += 1
@@ -336,6 +336,32 @@ class Estimator(object):
 
         return batch_loss
 
+    def soft_update_from(self, estimator, tau):
+        ''' Soft update the model parameters from estimator
+
+        Args:
+            estimator (Estimator): the estimator to copy from
+            tau (float): the soft update rate
+        '''
+        for target_param, param in zip(self.qnet.parameters(), estimator.qnet.parameters()):
+            target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
+
+    def save(self, path):
+        ''' Save the model to the path
+
+        Args:
+            path (str): path to save the model
+        '''
+        torch.save(self.qnet.state_dict(), path)
+
+    def load(self, path):
+        ''' Load the model from the path
+
+        Args:
+            path (str): path to load the model
+        '''
+        self.qnet.load_state_dict(torch.load(path))
+
 
 class EstimatorNetwork(nn.Module):
     ''' The function approximation network for Estimator
@@ -373,6 +399,8 @@ class EstimatorNetwork(nn.Module):
             s  (Tensor): (batch, state_shape)
         '''
         return self.fc_layers(s)
+
+    
 
 class Memory(object):
     ''' Memory for saving transitions

@@ -16,6 +16,21 @@ from rlcard.utils import (
     plot_curve,
 )
 
+#torch.set_num_threads(16)
+
+def cards_for_episode_nr(e):
+    if e < 200:
+        return 1
+    elif e < 300:
+        return 2
+    elif e < 500:
+        return 3
+    elif e < 1000:
+        return 5
+    else:
+        return 7
+
+
 def train(args):
 
     # Check whether gpu is available
@@ -46,8 +61,8 @@ def train(args):
         agent = NFSPAgent(
             num_actions=env.num_actions,
             state_shape=env.state_shape[0],
-            hidden_layers_sizes=[64,64],
-            q_mlp_layers=[64,64],
+            hidden_layers_sizes=[64,64, 64],
+            q_mlp_layers=[64,64, 64],
             device=device,
         )
     agents = [agent]
@@ -58,12 +73,14 @@ def train(args):
     # Start training
     with Logger(args.log_dir) as logger:
         counter = 0
+        no_cards = 1
         for episode in range(args.num_episodes):
+            print('Episode:', episode, '\n')
             if args.algorithm == 'nfsp':
                 agents[0].sample_episode_policy()
 
             # Generate data from the environment
-            trajectories, payoffs = env.run(is_training=True)
+            trajectories, payoffs = env.run(is_training=True, cards=no_cards)
 
             # Reorganaize the data to be state, action, reward, next_state, done
             trajectories = reorganize(trajectories, payoffs)
@@ -76,6 +93,7 @@ def train(args):
 
             # Evaluate the performance. Play with random agents.
             if episode % args.evaluate_every == 0:
+                no_cards = cards_for_episode_nr(episode)
                 logger.log_performance(
                     episode,
                     tournament(

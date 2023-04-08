@@ -7,19 +7,19 @@ from rlcard.games.uno2 import Round
 
 
 class UnoGame:
-
-    def __init__(self, allow_step_back=False, num_players=2):
+    def __init__(self, allow_step_back=False, num_players=2, starting_cards=7):
         self.allow_step_back = allow_step_back
         self.np_random = np.random.RandomState()
         self.num_players = num_players
         self.payoffs = [0 for _ in range(self.num_players)]
+        self.starting_cards = starting_cards
 
     def configure(self, game_config):
         ''' Specifiy some game specific parameters, such as number of players
         '''
         self.num_players = game_config['game_num_players']
 
-    def init_game(self):
+    def init_game(self, cards = 7):
         ''' Initialize players and state
 
         Returns:
@@ -39,7 +39,7 @@ class UnoGame:
 
         # Deal 7 cards to each player to prepare for the game
         for player in self.players:
-            self.dealer.deal_cards(player, 7)
+            self.dealer.deal_cards(player, cards)
 
         # Initialize a Round
         self.round = Round(self.dealer, self.num_players, self.np_random)

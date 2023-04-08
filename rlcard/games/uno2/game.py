@@ -118,7 +118,7 @@ class UnoGame:
         '''
         winner = self.round.winner
         if winner is not None and len(winner) == 1:
-            self.payoffs[winner[0]] = 1 - self.turn / 1000
+            self.payoffs[winner[0]] = 1 - self.round.turn / 1000
             self.payoffs[1 - winner[0]] = -1
         else:
             # assign the payoff -1 to all players

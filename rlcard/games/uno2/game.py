@@ -6,7 +6,7 @@ from rlcard.games.uno2 import Player
 from rlcard.games.uno2 import Round
 
 
-class UnoGame:
+class Uno2Game:
     def __init__(self, allow_step_back=False, num_players=2, starting_cards=7):
         self.allow_step_back = allow_step_back
         self.np_random = np.random.RandomState()
@@ -119,6 +119,8 @@ class UnoGame:
         winner = self.round.winner
         if winner is not None and len(winner) == 1:
             self.payoffs[winner[0]] = 1 - self.round.turn / 1000
+            if self.payoffs[winner[0]] < 0:
+                self.payoffs[winner[0]] = 0
             self.payoffs[1 - winner[0]] = -1
         else:
             # assign the payoff -1 to all players

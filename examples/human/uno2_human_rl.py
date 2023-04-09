@@ -4,7 +4,7 @@
 import rlcard
 from rlcard import models
 from rlcard.agents.human_agents.uno_human_agent import HumanAgent, _print_action
-from rlcard.agents import CFRAgent
+from rlcard.agents import NFSPAgent, DQNAgent
 
 # Make environment
 env = rlcard.make('uno2')
@@ -16,11 +16,15 @@ human_agent = HumanAgent(env.num_actions)
 # ])
 #model_path = '../../experiments/uno2_dqn_result2/model.pth'
 model_path = '../../experiments/uno2_nfsp_result/model.pth'
-cfr_agent = CFRAgent(env, model_path)
-cfr_agent.load()
+# if model path includes 'dqn', then use DQNAgent, otherwise use NFSPAgent
+if 'dqn' in model_path:
+    rl_agent = DQNAgent(env, model_path)
+else:
+    rl_agent = NFSPAgent(env, model_path)
+rl_agent.load()
 env.set_agents([
     human_agent,
-    cfr_agent,
+    rl_agent,
 ])
 
 print(">> UNO rule model V1")

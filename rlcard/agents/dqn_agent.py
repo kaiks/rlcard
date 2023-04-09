@@ -30,7 +30,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 from collections import namedtuple
-from copy import deepcopy
+import os
+import pickle
+#import copy
+
 
 from rlcard.utils.utils import remove_illegal
 
@@ -56,7 +59,9 @@ class DQNAgent(object):
                  train_every=1,
                  mlp_layers=None,
                  learning_rate=0.00005,
-                 device=None):
+                 device=None,
+                 save_every=1000,
+                 model_dir=None):
 
         '''
         Q-Learning algorithm for off-policy TD control using Function Approximation.
@@ -83,6 +88,7 @@ class DQNAgent(object):
             device (torch.device): whether to use the cpu or gpu
         '''
         self.use_raw = False
+        self.replay_memory_size = replay_memory_size
         self.replay_memory_init_size = replay_memory_init_size
         self.update_target_estimator_every = update_target_estimator_every
         self.discount_factor = discount_factor
@@ -90,6 +96,13 @@ class DQNAgent(object):
         self.batch_size = batch_size
         self.num_actions = num_actions
         self.train_every = train_every
+        self.epsilon_start = epsilon_start
+        self.epsilon_end = epsilon_end
+        self.learning_rate = learning_rate
+        self.state_shape = state_shape
+        self.mlp_layers = mlp_layers
+        self.model_dir = model_dir
+        self.save_every = save_every
 
         # Torch device
         if device is None:
@@ -215,12 +228,17 @@ class DQNAgent(object):
         loss = self.q_estimator.update(state_batch, action_batch, target_batch)
         print('\rINFO - Step {}, rl-loss: {}'.format(self.total_t, loss), end='')
 
+        self.train_t += 1
+
+        if self.train_t % self.save_every == 0:
+            print("\nINFO - Saving model...")
+            self.save(self.model_dir)
+            print("\nINFO - Saved model.")
+
         # Update the target estimator
-        if self.train_t % self.update_target_estimator_every == 0:
+        if self.train_t % self.update_target_estimator_every == 0 and self.model_dir is not None:
             self.target_estimator.soft_update_from(self.q_estimator, 0.01)
             print("\nINFO - Copied model parameters to target network.")
-
-        self.train_t += 1
 
     def feed_memory(self, state, action, reward, next_state, legal_actions, done):
         ''' Feed transition to memory
@@ -240,6 +258,96 @@ class DQNAgent(object):
         self.q_estimator.device = device
         self.target_estimator.device = device
 
+    def current_training_parameters(self):
+        return {
+            'epsilon_decay_steps': self.epsilon_decay_steps,
+            'epsilon_start': self.epsilon_start,
+            'epsilon_end': self.epsilon_end,
+            'discount_factor': self.discount_factor,
+            'learning_rate': self.learning_rate,
+            'batch_size': self.batch_size,
+            'update_target_estimator_every': self.update_target_estimator_every,
+            'train_every': self.train_every,
+            'train_t': self.train_t,
+            'num_actions': self.num_actions,
+            'state_shape': self.state_shape,
+            'total_t': self.total_t,
+            'train_t': self.train_t,
+            'mlp_layers': self.mlp_layers,
+            'replay_memory_size': self.replay_memory_size,
+            'replay_memory_init_size': self.replay_memory_init_size
+        }
+        
+
+    def save(self, path_dir):
+        ''' Save the model
+
+        Args:
+            path_dir (str): the path to the directory
+        '''
+        # save training parameters
+        with open(os.path.join(path_dir, 'params_dqn.bin'), 'wb') as f:
+            pickle.dump(self.current_training_parameters(), f)
+        
+        # save memory
+        self.memory.save_to_file(path_dir)
+
+        # save model
+        self.target_estimator.save(path_dir)
+
+    def load_training_parameters(self, path_dir):
+        ''' Load the training parameters from the directory
+
+        Args:
+            path_dir (str): the path to the directory
+        '''
+        with open(os.path.join(path_dir, 'params_dqn.bin'), 'rb') as f:
+            params = pickle.load(f)
+        print('INFO - Loaded training parameters from file:', params, '\n')
+        self.epsilon_decay_steps = params['epsilon_decay_steps']
+        self.epsilon_start = params['epsilon_start']
+        self.epsilon_end = params['epsilon_end']
+        self.discount_factor = params['discount_factor']
+        self.learning_rate = params['learning_rate']
+        self.batch_size = params['batch_size']
+        self.update_target_estimator_every = params['update_target_estimator_every']
+        self.train_every = params['train_every']
+        self.train_t = params['train_t']
+        self.num_actions = params['num_actions']
+        self.state_shape = params['state_shape']
+        self.total_t = params['total_t']
+        self.train_t = params['train_t']
+        self.mlp_layers = params['mlp_layers']
+        self.replay_memory_size = params['replay_memory_size']
+        self.replay_memory_init_size = params['replay_memory_init_size']
+
+    def reinitialize(self, params):
+        # reinitialize the estimators
+        self.q_estimator = Estimator(self.num_actions, self.learning_rate, self.state_shape, self.mlp_layers, self.device, params)
+        self.target_estimator = Estimator(self.num_actions, self.learning_rate, self.state_shape, self.mlp_layers, self.device, params)
+
+        self.epsilons = np.linspace(self.epsilon_start, self.epsilon_end, self.epsilon_decay_steps)
+        
+        self.memory = Memory(self.replay_memory_size, self.batch_size)
+
+    def load(self, path_dir):
+        ''' Load the model
+
+        Args:
+            path_dir (str): the path to the directory
+        '''
+        print('INFO - Loading model from {}'.format(path_dir))
+        
+        print('INFO - Loading training parameters')
+        self.load_training_parameters(path_dir)
+        
+        print('INFO - Reinitializing helper objects')
+        self.reinitialize(torch.load(os.path.join(path_dir, 'model.pth')))
+        
+        print('INFO - Loading memory')
+        self.memory.load_from_file(path_dir)
+        print('INFO - Done loading model')
+
 class Estimator(object):
     '''
     Approximate clone of rlcard.agents.dqn_agent.Estimator that
@@ -249,7 +357,7 @@ class Estimator(object):
     This network is used for both the Q-Network and the Target Network.
     '''
 
-    def __init__(self, num_actions=2, learning_rate=0.001, state_shape=None, mlp_layers=None, device=None):
+    def __init__(self, num_actions=2, learning_rate=0.001, state_shape=None, mlp_layers=None, device=None, params=None):
         ''' Initilalize an Estimator object.
 
         Args:
@@ -270,10 +378,13 @@ class Estimator(object):
         self.qnet = qnet
         self.qnet.eval()
 
-        # initialize the weights using Xavier init
-        for p in self.qnet.parameters():
-            if len(p.data.shape) > 1:
-                nn.init.xavier_uniform_(p.data)
+        
+        if params is not None:
+            self.qnet.load_state_dict(params)
+        else:
+            for p in self.qnet.parameters():
+                if len(p.data.shape) > 1:
+                    nn.init.xavier_uniform_(p.data)
 
         # set up loss function
         self.mse_loss = nn.MSELoss(reduction='mean')
@@ -352,15 +463,7 @@ class Estimator(object):
         Args:
             path (str): path to save the model
         '''
-        torch.save(self.qnet.state_dict(), path)
-
-    def load(self, path):
-        ''' Load the model from the path
-
-        Args:
-            path (str): path to load the model
-        '''
-        self.qnet.load_state_dict(torch.load(path))
+        torch.save(self.qnet.state_dict(), path + '/model.pth')
 
 
 class EstimatorNetwork(nn.Module):
@@ -444,3 +547,21 @@ class Memory(object):
         samples = random.sample(self.memory, self.batch_size)
         samples = tuple(zip(*samples))
         return tuple(map(np.array, samples[:-1])) + (samples[-1],)
+
+    def save_to_file(self, path_dir):
+        ''' Save the memory to a file
+
+        Args:
+            path_dir (str): the directory to save the memory
+        '''
+        with open(path_dir + '/memory.bin', 'wb') as f:
+            pickle.dump(self.memory, f)
+
+    def load_from_file(self, path_dir):
+        ''' Load the memory from a file
+
+        Args:
+            path_dir (str): the directory to load the memory
+        '''
+        with open(path_dir + '/memory.bin', 'rb') as f:
+            self.memory = pickle.load(f)

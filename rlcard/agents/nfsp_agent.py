@@ -30,6 +30,9 @@ import torch.nn.functional as F
 from rlcard.agents.dqn_agent import DQNAgent
 from rlcard.utils.utils import remove_illegal
 
+import os
+import pickle
+
 Transition = collections.namedtuple('Transition', 'info_state action_probs')
 
 class NFSPAgent(object):
@@ -62,7 +65,9 @@ class NFSPAgent(object):
                  q_train_every=1,
                  q_mlp_layers=None,
                  evaluate_with='average_policy',
-                 device=None):
+                 device=None,
+                 model_dir=None,
+                 save_every=1000):
         ''' Initialize the NFSP agent.
 
         Args:
@@ -90,20 +95,29 @@ class NFSPAgent(object):
             q_mlp_layers (list): The layer sizes of inner DQN agent.
             device (torch.device): Whether to use the cpu or gpu
         '''
+        # Store all init parameters
         self.use_raw = False
         self._num_actions = num_actions
         self._state_shape = state_shape
+        self._hidden_layers_sizes = hidden_layers_sizes
         self._layer_sizes = hidden_layers_sizes + [num_actions]
         self._batch_size = batch_size
         self._train_every = train_every
+        self._rl_learning_rate = rl_learning_rate
         self._sl_learning_rate = sl_learning_rate
         self._anticipatory_param = anticipatory_param
         self._min_buffer_size_to_learn = min_buffer_size_to_learn
 
+        self._reservoir_buffer_capacity = reservoir_buffer_capacity
         self._reservoir_buffer = ReservoirBuffer(reservoir_buffer_capacity)
         self._prev_timestep = None
         self._prev_action = None
         self.evaluate_with = evaluate_with
+
+        self.anticipatory_param = anticipatory_param
+
+        self.model_dir = model_dir
+        self.save_every = save_every
 
         if device is None:
             self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -127,20 +141,21 @@ class NFSPAgent(object):
 
         self.sample_episode_policy()
 
-    def _build_model(self):
+    def _build_model(self, params = None):
         ''' Build the average policy network
         '''
 
         # configure the average policy network
-        policy_network = AveragePolicyNetwork(self._num_actions, self._state_shape, self._layer_sizes)
+        policy_network = AveragePolicyNetwork(self._num_actions, self._state_shape, self._layer_sizes, params)
         policy_network = policy_network.to(self.device)
         self.policy_network = policy_network
         self.policy_network.eval()
 
         # xavier init
-        for p in self.policy_network.parameters():
-            if len(p.data.shape) > 1:
-                nn.init.xavier_uniform_(p.data)
+        if params is None:
+            for p in self.policy_network.parameters():
+                if len(p.data.shape) > 1:
+                    nn.init.xavier_uniform_(p.data)
 
         # configure optimizer
         self.policy_network_optimizer = torch.optim.Adam(self.policy_network.parameters(), lr=self._sl_learning_rate)
@@ -156,6 +171,12 @@ class NFSPAgent(object):
         if self.total_t>0 and len(self._reservoir_buffer) >= self._min_buffer_size_to_learn and self.total_t%self._train_every == 0:
             sl_loss  = self.train_sl()
             print('\rINFO - Step {}, sl-loss: {}'.format(self.total_t, sl_loss), end='')
+
+        if self.total_t % self.save_every == 0 and self.model_dir is not None:
+            print("\nINFO - Saving model...")
+            self.save(self.model_dir)
+            print("\nINFO - Saved model.")
+
 
     def step(self, state):
         ''' Returns the action to be taken.
@@ -288,6 +309,86 @@ class NFSPAgent(object):
         self.device = device
         self._rl_agent.set_device(device)
 
+    def current_training_parameters(self):
+        ''' Returns the current parameters of the agent.
+
+        Returns:
+            parameters (dict): The current parameters of the agent.
+        '''
+        parameters = {}
+        parameters['num_actions'] = self._num_actions
+        parameters['state_shape'] = self._state_shape
+        parameters['layer_sizes'] = self._layer_sizes
+        parameters['anticipatory_param'] = self._anticipatory_param
+        parameters['batch_size'] = self._batch_size
+        parameters['min_buffer_size_to_learn'] = self._min_buffer_size_to_learn
+        parameters['reservoir_buffer_capacity'] = self._reservoir_buffer_capacity
+        parameters['evaluate_with'] = self.evaluate_with
+        parameters['train_every'] = self._train_every
+        parameters['total_t'] = self.total_t
+
+
+        return parameters
+
+    def load_training_parameters(self, parameters):
+        ''' Loads the training parameters of the agent.
+
+        Args:
+            parameters (dict): The training parameters of the agent.
+        '''
+        self._num_actions = parameters['num_actions']
+        self._state_shape = parameters['state_shape']
+        self._layer_sizes = parameters['layer_sizes']
+        self._anticipatory_param = parameters['anticipatory_param']
+        self._batch_size = parameters['batch_size']
+        self._min_buffer_size_to_learn = parameters['min_buffer_size_to_learn']
+        self._reservoir_buffer_capacity = parameters['reservoir_buffer_capacity']
+        self.evaluate_with = parameters['evaluate_with']
+        self._train_every = parameters['train_every']
+        self.total_t = parameters['total_t']
+
+
+    def save(self, path_dir):
+        ''' Saves the model to the given path.
+
+        Args:
+            path_dir (str): The path to save the model.
+        '''
+
+        # save parameters
+        with open(os.path.join(path_dir, 'params_nfsp.bin'), 'wb') as f:
+            pickle.dump(self.current_training_parameters(), f)
+
+        # save policy network
+        self.policy_network.save(path_dir)
+        
+        # save rl agent
+        self._rl_agent.save(path_dir)
+
+        # save reservoir buffer
+        self._reservoir_buffer.save(path_dir)
+
+    def load(self, path):
+        ''' Loads the model from the given path.
+
+        Args:
+            path (str): The path to load the model.
+        '''
+        # load parameters
+        with open(os.path.join(path, 'params_nfsp.bin'), 'rb') as f:
+            parameters = pickle.load(f)
+        self.load_training_parameters(parameters)
+
+        weights = torch.load(path + '/average_policy_network.pt')
+        self._build_model(weights)
+        # load rl agent
+        # we don't need to do anything special with parameters because this is
+        # already handled in the agent's load function
+        self._rl_agent.load(path)
+
+        # load reservoir buffer
+        self._reservoir_buffer.load(path)
+
 class AveragePolicyNetwork(nn.Module):
     '''
     Approximates the history of action probabilities
@@ -295,7 +396,7 @@ class AveragePolicyNetwork(nn.Module):
     log probabilities of actions.
     '''
 
-    def __init__(self, num_actions=2, state_shape=None, mlp_layers=None):
+    def __init__(self, num_actions=2, state_shape=None, mlp_layers=None, params=None):
         ''' Initialize the policy network.  It's just a bunch of ReLU
         layers with no activation on the final one, initialized with
         Xavier (sonnet.nets.MLP and tensorflow defaults)
@@ -304,6 +405,7 @@ class AveragePolicyNetwork(nn.Module):
             num_actions (int): number of output actions
             state_shape (list): shape of state tensor for each sample
             mlp_laters (list): output size of each mlp layer including final
+            params (dict): dictionary of parameters to initialize network with
         '''
         super(AveragePolicyNetwork, self).__init__()
 
@@ -321,6 +423,11 @@ class AveragePolicyNetwork(nn.Module):
                 mlp.append(nn.ReLU())
         self.mlp = nn.Sequential(*mlp)
 
+        # load the parameters if given
+        if params is not None:
+            self.load_state_dict(params)
+
+
     def forward(self, s):
         ''' Log action probabilities of each action from state
 
@@ -333,6 +440,9 @@ class AveragePolicyNetwork(nn.Module):
         logits = self.mlp(s)
         log_action_probs = F.log_softmax(logits, dim=-1)
         return log_action_probs
+
+    def save(self, path):
+        torch.save(self.state_dict(), path + '/average_policy_network.pt')
 
 class ReservoirBuffer(object):
     ''' Allows uniform sampling over a stream of data.
@@ -392,4 +502,15 @@ class ReservoirBuffer(object):
 
     def __iter__(self):
         return iter(self._data)
+
+    def save(self, path):
+        data = { 'data': self._data, 'add_calls': self._add_calls }
+        with open(path + '/reservoir_buffer.bin', 'wb') as f:
+            pickle.dump(data, f)
+
+    def load(self, path):
+        with open(path + '/reservoir_buffer.bin', 'rb') as f:
+            data = pickle.load(f)
+        self._data = data['data']
+        self._add_calls = data['add_calls']
 

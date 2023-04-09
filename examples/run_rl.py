@@ -31,7 +31,7 @@ def cards_for_episode_nr(e):
         return 7
 
 
-def train(args):
+def train(args, pretrained_model = None):
 
     # Check whether gpu is available
     device = get_device()
@@ -55,6 +55,8 @@ def train(args):
             state_shape=env.state_shape[0],
             mlp_layers=[64,64],
             device=device,
+            model_dir=args.log_dir,
+            save_every=10000,
         )
     elif args.algorithm == 'nfsp':
         from rlcard.agents import NFSPAgent
@@ -64,7 +66,12 @@ def train(args):
             hidden_layers_sizes=[64,64, 64],
             q_mlp_layers=[64,64, 64],
             device=device,
+            model_dir=args.log_dir,
+            save_every=10000,
         )
+
+    if args.load_model_dir is not None:
+        agent.load(args.load_model_dir)
     agents = [agent]
     for _ in range(1, env.num_players):
         agents.append(RandomAgent(num_actions=env.num_actions))
@@ -72,7 +79,6 @@ def train(args):
 
     # Start training
     with Logger(args.log_dir) as logger:
-        counter = 0
         no_cards = 1
         for episode in range(args.num_episodes):
             print('Episode:', episode, '\n')
@@ -171,9 +177,22 @@ if __name__ == '__main__':
         type=str,
         default='experiments/leduc_holdem_dqn_result/',
     )
+    parser.add_argument(
+        '--load_model_dir',
+        type=str,
+        default=None,
+    )
 
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda
+    # if args.load_model is not None:
+    #     agent = torch.load(args.load_model)
+    #     agent.eval_mode = True
+    #     env = rlcard.make(args.env)
+    #     env.set_agents([agent])
+    #     print('>> Agent loaded from', args.load_model)
+    #     print('>> Start evaluating')
+    #     tournament(env, args.num_eval_games)
     train(args)
 

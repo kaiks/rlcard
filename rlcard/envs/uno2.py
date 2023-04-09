@@ -22,6 +22,7 @@ class UnoEnv(Env):
         self.action_shape = [None for _ in range(self.num_players)]
 
     def _extract_state(self, state):
+        # print('\nState: ', state)
         obs = np.zeros((5, 4, 15), dtype=int)
         encode_hand(obs[:3], state['hand'])
         encode_target(obs[3], state['target'])
@@ -38,16 +39,9 @@ class UnoEnv(Env):
         return np.array(self.game.get_payoffs())
 
     def _decode_action(self, action_id):
-        #print('Actions played so far: ', len(self.action_recorder))
-        # print('Action: ', action_id)
-        # print('Deck size: ', len(self.game.dealer.deck))
-        # for i in range(self.num_players):
-            # print('Player ', i, ' hand size: ', len(self.game.players[i].hand))
         legal_ids = self._get_legal_actions()
         if action_id in legal_ids:
             return ACTION_LIST[action_id]
-        # if (len(self.game.dealer.deck) + len(self.game.round.played_cards)) > 17:
-        #    return ACTION_LIST[60]
         return ACTION_LIST[np.random.choice(legal_ids)]
 
     def _get_legal_actions(self):

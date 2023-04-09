@@ -118,6 +118,7 @@ class NFSPAgent(object):
 
         self.model_dir = model_dir
         self.save_every = save_every
+        self._debug = False
 
         if device is None:
             self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -308,6 +309,10 @@ class NFSPAgent(object):
     def set_device(self, device):
         self.device = device
         self._rl_agent.set_device(device)
+
+    def debug(self, message):
+        if self._debug:
+            print(message)
 
     def current_training_parameters(self):
         ''' Returns the current parameters of the agent.

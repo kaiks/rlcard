@@ -52,7 +52,7 @@ class DQNAgent(object):
                  discount_factor=0.99,
                  epsilon_start=1.0,
                  epsilon_end=0.1,
-                 epsilon_decay_steps=20000,
+                 epsilon_decay_steps=700000,
                  batch_size=32,
                  num_actions=2,
                  state_shape=None,
@@ -116,6 +116,8 @@ class DQNAgent(object):
         # Total training step
         self.train_t = 0
 
+        self.debug = False
+
         # The epsilon decay scheduler
         self.epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
 
@@ -128,7 +130,7 @@ class DQNAgent(object):
         # Create replay memory
         self.memory = Memory(replay_memory_size, batch_size)
 
-    def feed(self, ts):
+    def feed(self, ts, end_of_episode=False):
         ''' Store data in to replay buffer and train the agent. There are two stages.
             In stage 1, populate the memory without training
             In stage 2, train the agent every several timesteps
@@ -140,7 +142,7 @@ class DQNAgent(object):
         self.feed_memory(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
         self.total_t += 1
         tmp = self.total_t - self.replay_memory_init_size
-        if tmp>=0 and tmp%self.train_every == 0:
+        if tmp>=0 and (tmp%self.train_every == 0 or end_of_episode):
             self.train()
 
     def step(self, state):
@@ -176,6 +178,12 @@ class DQNAgent(object):
         q_values = self.predict(state)
         best_action = np.argmax(q_values)
 
+        # Debug:
+        if self.debug:
+            print('DQN agent legal actions', state['legal_actions'])
+            print('DQN agent q_values', q_values)
+            print('DQN agent best action', best_action)
+
         info = {}
         info['values'] = {state['raw_legal_actions'][i]: float(q_values[list(state['legal_actions'].keys())[i]]) for i in range(len(state['legal_actions']))}
 
@@ -196,6 +204,11 @@ class DQNAgent(object):
         #print('DQN agent legal actions', state['legal_actions'])
         legal_actions = list(state['legal_actions'].keys())
         masked_q_values[legal_actions] = q_values[legal_actions]
+        # Debug info
+        if self.debug:
+            print('DQN agent legal actions', state['legal_actions'])
+            print('DQN agent q_values', q_values)
+            print('DQN agent masked_q_values', masked_q_values)
 
         return masked_q_values
 
@@ -258,6 +271,10 @@ class DQNAgent(object):
         self.q_estimator.device = device
         self.target_estimator.device = device
 
+    def debug(self, message):
+        if self.debug:
+            print(message)
+
     def current_training_parameters(self):
         return {
             'epsilon_decay_steps': self.epsilon_decay_steps,
@@ -301,6 +318,7 @@ class DQNAgent(object):
         Args:
             path_dir (str): the path to the directory
         '''
+        print('INFO - Loading training parameters')
         with open(os.path.join(path_dir, 'params_dqn.bin'), 'rb') as f:
             params = pickle.load(f)
         print('INFO - Loaded training parameters from file:', params, '\n')
@@ -322,6 +340,10 @@ class DQNAgent(object):
         self.replay_memory_init_size = params['replay_memory_init_size']
 
     def reinitialize(self, params):
+        print('INFO - Reinitializing helper objects')
+        # print class of params variable
+        print('INFO - params class:', type(params))
+        
         # reinitialize the estimators
         self.q_estimator = Estimator(self.num_actions, self.learning_rate, self.state_shape, self.mlp_layers, self.device, params)
         self.target_estimator = Estimator(self.num_actions, self.learning_rate, self.state_shape, self.mlp_layers, self.device, params)
@@ -338,11 +360,12 @@ class DQNAgent(object):
         '''
         print('INFO - Loading model from {}'.format(path_dir))
         
-        print('INFO - Loading training parameters')
         self.load_training_parameters(path_dir)
         
-        print('INFO - Reinitializing helper objects')
-        self.reinitialize(torch.load(os.path.join(path_dir, 'model.pth')))
+        params = torch.load(os.path.join(path_dir, 'model.pth'))
+        print('Params class:', type(params))
+        print('INFO - Loaded model parameters from file:', params, '\n')
+        self.reinitialize(params)
         
         print('INFO - Loading memory')
         self.memory.load_from_file(path_dir)

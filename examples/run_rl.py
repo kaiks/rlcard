@@ -25,7 +25,7 @@ def cards_for_episode_nr(e):
         return 2
     elif e < 500:
         return 3
-    elif e < 1000:
+    elif e < 900:
         return 5
     else:
         return 7
@@ -81,7 +81,7 @@ def train(args, pretrained_model = None):
     with Logger(args.log_dir) as logger:
         no_cards = 1
         for episode in range(args.num_episodes):
-            print('Episode:', episode, '\n')
+            print('\nEpisode:', episode, '\n')
             if args.algorithm == 'nfsp':
                 agents[0].sample_episode_policy()
 
@@ -115,9 +115,10 @@ def train(args, pretrained_model = None):
     plot_curve(csv_path, fig_path, args.algorithm)
 
     # Save model
-    save_path = os.path.join(args.log_dir, 'model.pth')
-    torch.save(agent, save_path)
-    print('Model saved in', save_path)
+    agent.save(args.log_dir)
+    # save_path = os.path.join(args.log_dir, 'model.pth')
+    # torch.save(agent, save_path)
+    # print('Model saved in', save_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("DQN/NFSP example in RLCard")

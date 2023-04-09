@@ -1,4 +1,5 @@
 import numpy as np
+#import pdb
 
 from rlcard.games.base import Card
 
@@ -147,8 +148,21 @@ def print_card(cards):
     for line in lines:
         print ('   '.join(line))
 
+def discounted_reward(step, base_reward = 1, discount = 0.99):
+    ''' Compute the discounted reward
+
+    Args:
+        step (int): The step of the transition
+        base_reward (float): The base reward
+        discount (float): The discount factor
+    '''
+
+    return base_reward * (discount ** step)
+
 def reorganize(trajectories, payoffs):
     ''' Reorganize the trajectory to make it RL friendly
+    trajectories[n] is a list of transitions for player n
+    Each transition is a list of [state, action, reward, next_state, done]
 
     Args:
         trajectory (list): A list of trajectories
@@ -162,17 +176,24 @@ def reorganize(trajectories, payoffs):
     new_trajectories = [[] for _ in range(num_players)]
 
     for player in range(num_players):
+        # Loop through each transition in the player's trajectory
+        total_turn_count = len(trajectories[player])-3
         for i in range(0, len(trajectories[player])-2, 2):
-            if i ==len(trajectories[player])-3:
+            # If this is the last transition, set reward and done flags accordingly
+            if i == len(trajectories[player])-3:
                 reward = payoffs[player]
-                done =True
+                done = True
             else:
-                reward, done = 0, False
-            transition = trajectories[player][i:i+3].copy()
-            transition.insert(2, reward)
-            transition.append(done)
-
-            new_trajectories[player].append(transition)
+                #decay_factor = min(1.0, (len(trajectories[player]) - i) / 1000.0)
+                turn_from_end = total_turn_count - i
+                reward = discounted_reward(turn_from_end, payoffs[player])  if (turn_from_end - i) < 100 else 0.001 * payoffs[player]
+                done = False
+            # Create a new transition with reward and done flags
+            state, action, next_state = trajectories[player][i:i+3]
+            new_transition = [state, action, reward, next_state, done]
+            # Add the new transition to the player's new trajectory
+            new_trajectories[player].append(new_transition)
+            
     return new_trajectories
 
 def remove_illegal(action_probs, legal_actions):

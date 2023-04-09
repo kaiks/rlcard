@@ -221,9 +221,6 @@ class UnoRound:
         # perform reverse card
         if card.trait == 'reverse':
             self.direction = -1 * direction
-            if len(players) == 2: # if there are only 2 players, reverse card is the same as skip card
-                self.target = card
-                return
 
         # perfrom skip card
         elif card.trait == 'skip':

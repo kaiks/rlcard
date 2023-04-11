@@ -73,8 +73,24 @@ def train(args, pretrained_model = None):
     if args.load_model_dir is not None:
         agent.load(args.load_model_dir)
     agents = [agent]
-    for _ in range(1, env.num_players):
-        agents.append(RandomAgent(num_actions=env.num_actions))
+    
+    if args.other_model_dir is not None:
+        other_agent = DQNAgent(
+            num_actions=env.num_actions,
+            state_shape=env.state_shape[0],
+            mlp_layers=[64,64],
+            device=device,
+            model_dir=args.other_model_dir,
+            save_every=10000,
+            train = False
+        )
+        other_agent.load(args.other_model_dir)
+        agents.append(other_agent)
+    else:
+        for _ in range(1, env.num_players):
+            agents.append(RandomAgent(num_actions=env.num_actions))
+
+
     env.set_agents(agents)
 
     # Start training
@@ -182,6 +198,11 @@ if __name__ == '__main__':
         '--load_model_dir',
         type=str,
         default=None,
+    )
+    parser.add_argument(
+        '--other_model_dir',
+        type=str,
+        default=None
     )
 
     args = parser.parse_args()

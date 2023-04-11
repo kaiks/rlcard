@@ -61,7 +61,8 @@ class DQNAgent(object):
                  learning_rate=0.00005,
                  device=None,
                  save_every=1000,
-                 model_dir=None):
+                 model_dir=None,
+                 train = True):
 
         '''
         Q-Learning algorithm for off-policy TD control using Function Approximation.
@@ -155,6 +156,8 @@ class DQNAgent(object):
         Returns:
             action (int): an action id
         '''
+        if self.train == False:
+            self.eval_step(self, state)
         q_values = self.predict(state)
         epsilon = self.epsilons[min(self.total_t, self.epsilon_decay_steps-1)] # this calculation can probably be eliminated after t>epsilon end
         legal_actions = list(state['legal_actions'].keys())
@@ -220,6 +223,8 @@ class DQNAgent(object):
         Returns:
             loss (float): The loss of the current batch.
         '''
+        if self.train == False:
+            return
         state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = self.memory.sample()
 
         # Calculate best next actions using Q-network (Double DQN)

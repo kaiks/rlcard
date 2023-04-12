@@ -39,7 +39,6 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = namedtuple('Transition', ['state', 'action', 'reward', 'next_state', 'done', 'legal_actions'])
 
-
 class DQNAgent(object):
     '''
     Approximate clone of rlcard.agents.dqn_agent.DQNAgent
@@ -62,7 +61,7 @@ class DQNAgent(object):
                  device=None,
                  save_every=1000,
                  model_dir=None,
-                 train = True):
+                 training_mode = True):
 
         '''
         Q-Learning algorithm for off-policy TD control using Function Approximation.
@@ -104,7 +103,8 @@ class DQNAgent(object):
         self.mlp_layers = mlp_layers
         self.model_dir = model_dir
         self.save_every = save_every
-
+        self.training_mode = training_mode
+        
         # Torch device
         if device is None:
             self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -117,7 +117,10 @@ class DQNAgent(object):
         # Total training step
         self.train_t = 0
 
-        self.debug = False
+        if self.training_mode:
+            self.debug = False
+        else:
+            self.debug = False #True
 
         # The epsilon decay scheduler
         self.epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
@@ -129,7 +132,8 @@ class DQNAgent(object):
             mlp_layers=mlp_layers, device=self.device)
 
         # Create replay memory
-        self.memory = Memory(replay_memory_size, batch_size)
+        if self.training_mode:
+            self.memory = Memory(replay_memory_size, batch_size)
 
     def feed(self, ts):
         ''' Store data in to replay buffer and train the agent. There are two stages.
@@ -157,7 +161,7 @@ class DQNAgent(object):
             action (int): an action id
         '''
         if self.train == False:
-            self.eval_step(self, state)
+            return self.eval_step(self, state)[0]
         q_values = self.predict(state)
         epsilon = self.epsilons[min(self.total_t, self.epsilon_decay_steps-1)] # this calculation can probably be eliminated after t>epsilon end
         legal_actions = list(state['legal_actions'].keys())
@@ -310,6 +314,9 @@ class DQNAgent(object):
             path_dir (str): the path to the directory
         '''
         # save training parameters
+        if self.training_mode:
+            return
+        
         with open(os.path.join(path_dir, 'params_dqn.bin'), 'wb') as f:
             pickle.dump(self.current_training_parameters(), f)
         
@@ -345,6 +352,13 @@ class DQNAgent(object):
         self.mlp_layers = params['mlp_layers']
         self.replay_memory_size = params['replay_memory_size']
         self.replay_memory_init_size = params['replay_memory_init_size']
+        
+        if not self.training_mode:
+            self.train_every = 9999999999999
+            self.replay_memory_init_size = 0
+            self.replay_memory_size = 0
+            self.save_every = 9999999999999
+            
 
     def reinitialize(self, params):
         print('INFO - Reinitializing helper objects')
@@ -357,7 +371,8 @@ class DQNAgent(object):
 
         self.epsilons = np.linspace(self.epsilon_start, self.epsilon_end, self.epsilon_decay_steps)
         
-        self.memory = Memory(self.replay_memory_size, self.batch_size)
+        if self.training_mode:
+            self.memory = Memory(self.replay_memory_size, self.batch_size)
 
     def load(self, path_dir):
         ''' Load the model
@@ -373,10 +388,12 @@ class DQNAgent(object):
         print('Params class:', type(params))
         print('INFO - Loaded model parameters from file:', params, '\n')
         self.reinitialize(params)
+        del params
         
-        print('INFO - Loading memory')
-        self.memory.load_from_file(path_dir)
-        print('INFO - Done loading model')
+        if self.training_mode:
+            print('INFO - Loading memory')
+            self.memory.load_from_file(path_dir)
+            print('INFO - Done loading model')
 
 class Estimator(object):
     '''

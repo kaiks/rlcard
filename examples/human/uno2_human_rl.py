@@ -1,6 +1,9 @@
 ''' A toy example of playing against rule-based bot on UNO
 '''
 
+import os
+import argparse
+
 import rlcard
 from rlcard import models
 from rlcard.agents.human_agents.uno_human_agent import HumanAgent, _print_action
@@ -12,20 +15,20 @@ from rlcard.utils import (
     reorganize,
 )
 
-# Make environment
+parser = argparse.ArgumentParser("DQN/NFSP human play in RLCard")
+parser.add_argument(
+    '--load_model_dir',
+    type=str,
+    default=None,
+)
+args = parser.parse_args()
+
 env = rlcard.make('uno2')
 human_agent = HumanAgent(env.num_actions)
-#cfr_agent = models.load('uno-rule-v1').agents[0]
-# env.set_agents([
-#     human_agent,
-#     cfr_agent,
-# ])
-#model_path = '../../experiments/uno2_dqn_result2/model.pth'
 
-model_path = 'C:\\Users\\karol\\prog\\rlcard\\experiments\\uno2_dqn_discounting'
 device = get_device()
 # if model path includes 'dqn', then use DQNAgent, otherwise use NFSPAgent
-if 'dqn' in model_path:
+if 'dqn' in args.load_model_dir:
     rl_agent = DQNAgent(
             num_actions=env.num_actions,
             state_shape=env.state_shape[0],
@@ -35,11 +38,14 @@ if 'dqn' in model_path:
         )
 else:
     rl_agent = NFSPAgent()
-rl_agent.load(model_path)
+
+rl_agent.load(args.load_model_dir)
+
 env.set_agents([
     human_agent,
     rl_agent,
 ])
+
 env.debug = True
 
 print(">> UNO rule model V1")

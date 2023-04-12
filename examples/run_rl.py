@@ -82,7 +82,7 @@ def train(args, pretrained_model = None):
             device=device,
             model_dir=args.other_model_dir,
             save_every=10000,
-            train = False
+            training_mode = False
         )
         other_agent.load(args.other_model_dir)
         agents.append(other_agent)

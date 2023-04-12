@@ -1,5 +1,5 @@
 from rlcard.utils import *
-
+from rlcard.games.uno.card import UnoCard
 class Env(object):
     '''
     The base Env class. For all the environments in RLCard,
@@ -78,9 +78,20 @@ class Env(object):
         if not raw_action:
             action = self._decode_action(action)
 
+        player = self.get_player_id()
+        # debug
+        debug = False
+        if debug:
+            print("Player", player, "action:", action)
+            # get player cards
+            cards = self.game.players[player].hand
+            # map each card using get_str()
+            cards = [UnoCard.get_str(card) for card in cards]
+            print(f"Player hand", UnoCard.print_cards(cards))
+        
         self.timestep += 1
         # Record the action for human interface
-        self.action_recorder.append((self.get_player_id(), action))
+        self.action_recorder.append((player, action))
         next_state, player_id = self.game.step(action)
 
         return self._extract_state(next_state), player_id

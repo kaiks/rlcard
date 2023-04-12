@@ -95,7 +95,7 @@ class UnoRound:
         if not player.hand:
             self.is_over = True
             self.winner = [self.current_player]
-        if self.dealer.starting_cards <= 3 and self.turn > 1000:
+        if self.dealer.starting_cards <= 3 and self.turn > 1000 or self.turn > 20000:
             self.is_over = True
             self.winner = []
         self.played_cards.append(card)

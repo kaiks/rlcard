@@ -162,7 +162,7 @@ class DQNAgent(object):
         Returns:
             action (int): an action id
         '''
-        if self.train == False:
+        if self.training_mode == False:
             return self.eval_step(self, state)[0]
         q_values = self.predict(state)
         epsilon = self.epsilons[min(self.total_t, self.epsilon_decay_steps-1)] # this calculation can probably be eliminated after t>epsilon end
@@ -229,7 +229,7 @@ class DQNAgent(object):
         Returns:
             loss (float): The loss of the current batch.
         '''
-        if self.train == False:
+        if self.training_mode == False:
             return
         state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = self.memory.sample()
 

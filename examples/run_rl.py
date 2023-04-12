@@ -81,7 +81,7 @@ def train(args, pretrained_model = None):
             mlp_layers=[64,64],
             device=device,
             model_dir=args.other_model_dir,
-            save_every=10000,
+            save_every=9999999999,
             training_mode = False
         )
         other_agent.load(args.other_model_dir)

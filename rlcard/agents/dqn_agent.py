@@ -163,7 +163,7 @@ class DQNAgent(object):
             action (int): an action id
         '''
         if self.training_mode == False:
-            return self.eval_step(self, state)[0]
+            return self.eval_step(state)[0]
         q_values = self.predict(state)
         epsilon = self.epsilons[min(self.total_t, self.epsilon_decay_steps-1)] # this calculation can probably be eliminated after t>epsilon end
         legal_actions = list(state['legal_actions'].keys())

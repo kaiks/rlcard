@@ -143,9 +143,11 @@ class DQNAgent(object):
         Args:
             ts (list): a list of 5 elements that represent the transition
         '''
+        self.total_t += 1
+        if self.training_mode:
+            return
         (state, action, reward, next_state, done) = tuple(ts)
         self.feed_memory(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
-        self.total_t += 1
         tmp = self.total_t - self.replay_memory_init_size
         if tmp>=0 and tmp%self.train_every == 0:
             self.train()

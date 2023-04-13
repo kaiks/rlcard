@@ -87,8 +87,9 @@ def train(args, pretrained_model = None):
         other_agent.load(args.other_model_dir)
         agents.append(other_agent)
     else:
+        from rlcard import models
         for _ in range(1, env.num_players):
-            agents.append(RandomAgent(num_actions=env.num_actions))
+            agents.append(models.load('uno-rule-v2').agents[1])
 
 
     env.set_agents(agents)

@@ -144,7 +144,7 @@ class DQNAgent(object):
             ts (list): a list of 5 elements that represent the transition
         '''
         self.total_t += 1
-        if self.training_mode:
+        if not self.training_mode:
             return
         (state, action, reward, next_state, done) = tuple(ts)
         self.feed_memory(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
@@ -162,7 +162,7 @@ class DQNAgent(object):
         Returns:
             action (int): an action id
         '''
-        if self.training_mode == False:
+        if not self.training_mode:
             return self.eval_step(state)[0]
         q_values = self.predict(state)
         epsilon = self.epsilons[min(self.total_t, self.epsilon_decay_steps-1)] # this calculation can probably be eliminated after t>epsilon end
@@ -316,7 +316,7 @@ class DQNAgent(object):
             path_dir (str): the path to the directory
         '''
         # save training parameters
-        if self.training_mode:
+        if not self.training_mode:
             return
         
         with open(os.path.join(path_dir, 'params_dqn.bin'), 'wb') as f:

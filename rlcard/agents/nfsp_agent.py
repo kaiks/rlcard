@@ -66,8 +66,8 @@ class NFSPAgent(object):
                  q_mlp_layers=None,
                  evaluate_with='average_policy',
                  device=None,
-                 model_dir=None,
-                 save_every=1000):
+                 save_path=None,
+                 save_every=-1):
         ''' Initialize the NFSP agent.
 
         Args:
@@ -127,9 +127,9 @@ class NFSPAgent(object):
 
         # Total timesteps
         self.total_t = 0
-
-        # Step counter to keep track of learning.
-        self._step_counter = 0
+        
+        # Total training step
+        self.train_t = 0
 
         # Build the action-value network
         self._rl_agent = DQNAgent(q_replay_memory_size, q_replay_memory_init_size, \
@@ -141,8 +141,12 @@ class NFSPAgent(object):
         self._build_model()
 
         self.sample_episode_policy()
+        
+        # Checkpoint saving parameters
+        self.save_path = save_path
+        self.save_every = save_every
 
-    def _build_model(self, params = None):
+    def _build_model(self):
         ''' Build the average policy network
         '''
 
@@ -304,95 +308,90 @@ class NFSPAgent(object):
         ce_loss = ce_loss.item()
         self.policy_network.eval()
 
+        self.train_t += 1
+
+        if self.save_path and self.train_t % self.save_every == 0:
+            # To preserve every checkpoint separately, 
+            # add another argument to the function call parameterized by self.train_t
+            self.save_checkpoint(self.save_path)
+            print("\nINFO - Saved model checkpoint.")
+
         return ce_loss
 
     def set_device(self, device):
         self.device = device
         self._rl_agent.set_device(device)
-
-    def debug(self, message):
-        if self._debug:
-            print(message)
-
-    def current_training_parameters(self):
-        ''' Returns the current parameters of the agent.
-
-        Returns:
-            parameters (dict): The current parameters of the agent.
-        '''
-        parameters = {}
-        parameters['num_actions'] = self._num_actions
-        parameters['state_shape'] = self._state_shape
-        parameters['layer_sizes'] = self._layer_sizes
-        parameters['anticipatory_param'] = self._anticipatory_param
-        parameters['batch_size'] = self._batch_size
-        parameters['min_buffer_size_to_learn'] = self._min_buffer_size_to_learn
-        parameters['reservoir_buffer_capacity'] = self._reservoir_buffer_capacity
-        parameters['evaluate_with'] = self.evaluate_with
-        parameters['train_every'] = self._train_every
-        parameters['total_t'] = self.total_t
-
-
-        return parameters
-
-    def load_training_parameters(self, parameters):
-        ''' Loads the training parameters of the agent.
-
-        Args:
-            parameters (dict): The training parameters of the agent.
-        '''
-        self._num_actions = parameters['num_actions']
-        self._state_shape = parameters['state_shape']
-        self._layer_sizes = parameters['layer_sizes']
-        self._anticipatory_param = parameters['anticipatory_param']
-        self._batch_size = parameters['batch_size']
-        self._min_buffer_size_to_learn = parameters['min_buffer_size_to_learn']
-        self._reservoir_buffer_capacity = parameters['reservoir_buffer_capacity']
-        self.evaluate_with = parameters['evaluate_with']
-        self._train_every = parameters['train_every']
-        self.total_t = parameters['total_t']
-
-
-    def save(self, path_dir):
-        ''' Saves the model to the given path.
-
-        Args:
-            path_dir (str): The path to save the model.
-        '''
-
-        # save parameters
-        with open(os.path.join(path_dir, 'params_nfsp.bin'), 'wb') as f:
-            pickle.dump(self.current_training_parameters(), f)
-
-        # save policy network
-        self.policy_network.save(path_dir)
         
-        # save rl agent
-        self._rl_agent.save(path_dir)
-
-        # save reservoir buffer
-        self._reservoir_buffer.save(path_dir)
-
-    def load(self, path):
-        ''' Loads the model from the given path.
+    def checkpoint_attributes(self):
+        '''
+        Return the current checkpoint attributes (dict)
+        Checkpoint attributes are used to save and restore the model in the middle of training
+        Saves the model state dict, optimizer state dict, and all other instance variables
+        '''
+        
+        return {
+            'agent_type': 'NFSPAgent',
+            'policy_network': self.policy_network.checkpoint_attributes(),
+            'reservoir_buffer': self._reservoir_buffer.checkpoint_attributes(),
+            'rl_agent': self._rl_agent.checkpoint_attributes(),
+            'policy_network_optimizer': self.policy_network_optimizer.state_dict(),
+            'device': self.device,
+            'anticipatory_param': self._anticipatory_param,
+            'batch_size': self._batch_size,
+            'min_buffer_size_to_learn': self._min_buffer_size_to_learn,
+            'num_actions': self._num_actions,
+            'mode': self._mode,
+            'evaluate_with': self.evaluate_with,
+            'total_t': self.total_t,
+            'train_t': self.train_t,
+            'sl_learning_rate': self._sl_learning_rate,
+            'train_every': self._train_every,
+        }
+    
+    @classmethod
+    def from_checkpoint(cls, checkpoint):
+        '''
+        Restore the model from a checkpoint
+        
+        Args:
+            checkpoint (dict): the checkpoint attributes generated by checkpoint_attributes()
+        '''
+        print("\nINFO - Restoring model from checkpoint...")
+        agent = cls(
+            anticipatory_param=checkpoint['anticipatory_param'],
+            batch_size=checkpoint['batch_size'],
+            min_buffer_size_to_learn=checkpoint['min_buffer_size_to_learn'],
+            num_actions=checkpoint['num_actions'],
+            sl_learning_rate=checkpoint['sl_learning_rate'],
+            train_every=checkpoint['train_every'],
+            evaluate_with=checkpoint['evaluate_with'],
+            device=checkpoint['device'],
+            q_mlp_layers=checkpoint['rl_agent']['q_estimator']['mlp_layers'],
+            state_shape=checkpoint['rl_agent']['q_estimator']['state_shape'],
+            hidden_layers_sizes=[],
+        )
+        
+        agent.policy_network = AveragePolicyNetwork.from_checkpoint(checkpoint['policy_network'])
+        agent._reservoir_buffer = ReservoirBuffer.from_checkpoint(checkpoint['reservoir_buffer'])
+        agent._mode = checkpoint['mode']
+        agent.total_t = checkpoint['total_t']
+        agent.train_t = checkpoint['train_t']
+        agent.policy_network.to(agent.device)
+        agent.policy_network.eval()
+        agent.policy_network_optimizer = torch.optim.Adam(agent.policy_network.parameters(), lr=agent._sl_learning_rate)
+        agent.policy_network_optimizer.load_state_dict(checkpoint['policy_network_optimizer'])
+        agent._rl_agent.from_checkpoint(checkpoint['rl_agent'])
+        agent._rl_agent.set_device(agent.device)
+        return agent
+        
+    def save_checkpoint(self, path, filename='checkpoint_nfsp.pt'):
+        ''' Save the model checkpoint (all attributes)
 
         Args:
-            path (str): The path to load the model.
+            path (str): the path to save the model
         '''
-        # load parameters
-        with open(os.path.join(path, 'params_nfsp.bin'), 'rb') as f:
-            parameters = pickle.load(f)
-        self.load_training_parameters(parameters)
-
-        weights = torch.load(path + '/average_policy_network.pt')
-        self._build_model(weights)
-        # load rl agent
-        # we don't need to do anything special with parameters because this is
-        # already handled in the agent's load function
-        self._rl_agent.load(path)
-
-        # load reservoir buffer
-        self._reservoir_buffer.load(path)
+        torch.save(self.checkpoint_attributes(), path + '/' + filename)
+        
 
 class AveragePolicyNetwork(nn.Module):
     '''
@@ -445,9 +444,37 @@ class AveragePolicyNetwork(nn.Module):
         logits = self.mlp(s)
         log_action_probs = F.log_softmax(logits, dim=-1)
         return log_action_probs
-
-    def save(self, path):
-        torch.save(self.state_dict(), path + '/average_policy_network.pt')
+    
+    def checkpoint_attributes(self):
+        '''
+        Return the current checkpoint attributes (dict)
+        Checkpoint attributes are used to save and restore the model in the middle of training
+        '''
+        
+        return {
+            'num_actions': self.num_actions,
+            'state_shape': self.state_shape,
+            'mlp_layers': self.mlp_layers,
+            'mlp': self.mlp.state_dict(),
+        }
+        
+    @classmethod
+    def from_checkpoint(cls, checkpoint):
+        '''
+        Restore the model from a checkpoint
+        
+        Args:
+            checkpoint (dict): the checkpoint attributes generated by checkpoint_attributes()
+        '''
+        
+        agent = cls(
+            num_actions=checkpoint['num_actions'],
+            state_shape=checkpoint['state_shape'],
+            mlp_layers=checkpoint['mlp_layers'],
+        )
+        
+        agent.mlp.load_state_dict(checkpoint['mlp'])
+        return agent
 
 class ReservoirBuffer(object):
     ''' Allows uniform sampling over a stream of data.
@@ -501,6 +528,20 @@ class ReservoirBuffer(object):
         '''
         self._data = []
         self._add_calls = 0
+        
+    def checkpoint_attributes(self):
+        return {
+            'data': self._data,
+            'add_calls': self._add_calls,
+            'reservoir_buffer_capacity': self._reservoir_buffer_capacity,
+        }
+        
+    @classmethod
+    def from_checkpoint(cls, checkpoint):
+        reservoir_buffer = cls(checkpoint['reservoir_buffer_capacity'])
+        reservoir_buffer._data = checkpoint['data']
+        reservoir_buffer._add_calls = checkpoint['add_calls']
+        return reservoir_buffer
 
     def __len__(self):
         return len(self._data)

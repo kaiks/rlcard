@@ -261,7 +261,7 @@ class DQNAgent(object):
         self.train_t += 1
 
         # Update the target estimator
-        if self.train_t % self.update_target_estimator_every == 0 and self.model_dir is not None: 
+        if self.train_t % self.update_target_estimator_every == 0: 
             # this could maybe be eliminated with the soft update set to 0.001
             print("\nINFO - Copied model parameters to target network.")
             self.target_estimator.soft_update_from(self.q_estimator, 0.01)            

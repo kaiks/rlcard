@@ -103,8 +103,6 @@ class DQNAgent(object):
         self.learning_rate = learning_rate
         self.state_shape = state_shape
         self.mlp_layers = mlp_layers
-        self.model_dir = model_dir
-        self.save_every = save_every
         self.training_mode = training_mode
         
         # Torch device

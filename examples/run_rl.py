@@ -83,16 +83,7 @@ def train(args, pretrained_model = None):
     agents = [agent]
     
     if args.other_model_dir is not None:
-        other_agent = DQNAgent(
-            num_actions=env.num_actions,
-            state_shape=env.state_shape[0],
-            mlp_layers=[64,64],
-            device=device,
-            model_dir=args.other_model_dir,
-            save_every=9999999999,
-            training_mode = False
-        )
-        other_agent.load(args.other_model_dir)
+        other_agent = DQNAgent.from_checkpoint(checkpoint = torch.load(args.other_model_dir))
         agents.append(other_agent)
     else:
         from rlcard import models

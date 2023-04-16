@@ -116,8 +116,6 @@ class NFSPAgent(object):
 
         self.anticipatory_param = anticipatory_param
 
-        self.model_dir = model_dir
-        self.save_every = save_every
         self._debug = False
 
         if device is None:
@@ -179,7 +177,7 @@ class NFSPAgent(object):
 
         if self.total_t % self.save_every == 0 and self.model_dir is not None:
             print("\nINFO - Saving model...")
-            self.save(self.model_dir)
+            self.save_checkpoint(self.save_path)
             print("\nINFO - Saved model.")
 
 

@@ -262,7 +262,7 @@ class DQNAgent(object):
 
         if self.train_t % self.save_every == 0:
             print("\nINFO - Saving model...")
-            self.save(self.model_dir)
+            self.save_checkpoint(self.save_path)
             print("\nINFO - Saved model.")
 
         # Update the target estimator

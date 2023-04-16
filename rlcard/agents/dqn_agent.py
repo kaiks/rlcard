@@ -55,7 +55,7 @@ class DQNAgent(object):
                  batch_size=32,
                  num_actions=2,
                  state_shape=None,
-                 train_every=1,
+                 train_every=100,
                  mlp_layers=None,
                  learning_rate=0.00005,
                  device=None,
@@ -260,18 +260,11 @@ class DQNAgent(object):
 
         self.train_t += 1
 
-        if self.train_t % self.save_every == 0:
-            print("\nINFO - Saving model...")
-            self.save_checkpoint(self.save_path)
-            print("\nINFO - Saved model.")
-
         # Update the target estimator
         if self.train_t % self.update_target_estimator_every == 0 and self.model_dir is not None: 
-# this could maybe be eliminated with the soft update set to 0.001            self.target_estimator.soft_update_from(self.q_estimator, 0.01)
+            # this could maybe be eliminated with the soft update set to 0.001
             print("\nINFO - Copied model parameters to target network.")
-            self.target_estimator.soft_update_from(self.q_estimator, 0.01)
-            
-        self.train_t += 1
+            self.target_estimator.soft_update_from(self.q_estimator, 0.01)            
 
         if self.save_path and self.train_t % self.save_every == 0:
             # To preserve every checkpoint separately, 

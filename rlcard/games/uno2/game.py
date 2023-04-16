@@ -34,7 +34,7 @@ class Uno2Game:
 
         # Initialize a dealer that can deal cards
         self.dealer = Dealer(self.np_random)
-        self.dealer.starting_cards = 7
+        self.dealer.starting_cards = self.starting_cards
 
         # Initialize four players to play the game
         self.players = [Player(i, self.np_random) for i in range(self.num_players)]

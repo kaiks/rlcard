@@ -121,7 +121,7 @@ def train(args, pretrained_model = None):
                     episode,
                     tournament(
                         env,
-                        args.num_eval_games,
+                        args.num_eval_games
                     )[0]
                 )
 

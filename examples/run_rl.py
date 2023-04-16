@@ -59,20 +59,11 @@ def train(args, pretrained_model = None):
             agent = DQNAgent(
                 num_actions=env.num_actions,
                 state_shape=env.state_shape[0],
-                mlp_layers=[64,64],
+                mlp_layers=[96,96,96],
                 device=device,
                 save_path=args.log_dir,
                 save_every=args.save_every
             )
-
-        agent = DQNAgent(
-            num_actions=env.num_actions,
-            state_shape=env.state_shape[0],
-            mlp_layers=[64,64],
-            device=device,
-            model_dir=args.log_dir,
-            save_every=10000,
-        )
     elif args.algorithm == 'nfsp':
         from rlcard.agents import NFSPAgent
         if args.load_checkpoint_path != "":
@@ -83,21 +74,12 @@ def train(args, pretrained_model = None):
             agent = NFSPAgent(
                 num_actions=env.num_actions,
                 state_shape=env.state_shape[0],
-                hidden_layers_sizes=[64,64],
-                q_mlp_layers=[64,64],
+                hidden_layers_sizes=[96, 96, 96],
+                q_mlp_layers=[96, 96, 96],
                 device=device,
                 save_path=args.log_dir,
                 save_every=10000
             )
-        agent = NFSPAgent(
-            num_actions=env.num_actions,
-            state_shape=env.state_shape[0],
-            hidden_layers_sizes=[64,64, 64],
-            q_mlp_layers=[64,64, 64],
-            device=device,
-            model_dir=args.log_dir,
-            save_every=10000,
-        )
     agents = [agent]
     
     if args.other_model_dir is not None:
@@ -115,7 +97,8 @@ def train(args, pretrained_model = None):
     else:
         from rlcard import models
         for _ in range(1, env.num_players):
-            agents.append(models.load('uno-rule-v2').agents[1])
+            agents.append(RandomAgent(num_actions=env.num_actions))
+            # agents.append(models.load('uno-rule-v2').agents[1])
 
 
     env.set_agents(agents)

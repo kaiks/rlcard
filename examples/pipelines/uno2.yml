@@ -9,11 +9,11 @@ pipeline:
   print_current_episode_info: true
 agent:
   algorithm: dqn
-  network: mlp
-  lr: 0.001
-  discount_factor: 0.99
-  mlp_layers: [128, 64, 128]
-  save_every: 5000
+  parameters:
+    learning_rate: 0.001
+    discount_factor: 0.99
+    mlp_layers: [128, 64, 128]
+    save_every: 5000
 env:
   name: uno2
   no_starting_cards: 1

@@ -266,7 +266,7 @@ class DQNAgent(object):
             print("\nINFO - Copied model parameters to target network.")
             self.target_estimator.soft_update_from(self.q_estimator, 0.01)            
 
-        if self.save_path and self.train_t % self.save_every == 0:
+        if self.save_path and (self.train_t % self.save_every) == 0:
             # To preserve every checkpoint separately, 
             # add another argument to the function call parameterized by self.train_t
             self.save_checkpoint(self.save_path)

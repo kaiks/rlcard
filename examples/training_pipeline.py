@@ -60,13 +60,13 @@ def train_pipeline(pipeline_config):
     # Initialize the agent
     if config['agent']['algorithm'] == 'dqn':
         from rlcard.agents import DQNAgent
+        
         agent = DQNAgent(
             num_actions=env.num_actions,
             state_shape=env.state_shape[0],
-            mlp_layers=config['agent']['mlp_layers'],
             device=device,
-        )
-        
+            **config['agent']['parameters']
+        )        
     print_current_episode = config['pipeline']['print_current_episode_info']
 
     # Iterate through the pipeline stages

@@ -45,7 +45,7 @@ class Env(object):
         self.seed(config['seed'])
 
 
-    def reset(self, cards = 7):
+    def reset(self):
         ''' Start a new game
 
         Returns:
@@ -54,7 +54,7 @@ class Env(object):
                 (numpy.array): The begining state of the game
                 (int): The begining player
         '''
-        state, player_id = self.game.init_game(cards)
+        state, player_id = self.game.init_game()
         self.action_recorder = []
         return self._extract_state(state), player_id
 
@@ -138,7 +138,7 @@ class Env(object):
                 _game_config[key] = config[key]
         self.game.configure(_game_config)
 
-    def run(self, is_training=False, cards = 7):
+    def run(self, is_training=False):
         '''
         Run a complete game, either for evaluation or training RL agent.
 
@@ -155,7 +155,7 @@ class Env(object):
               The second dimension is for different transitions. The third dimension is for the contents of each transiton
         '''
         trajectories = [[] for _ in range(self.num_players)]
-        state, player_id = self.reset(cards)
+        state, player_id = self.reset()
 
         # Loop to play the game
         trajectories[player_id].append(state)

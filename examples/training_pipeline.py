@@ -77,8 +77,8 @@ def train_pipeline(pipeline_config):
         # Set adverse agents
         adverse_agents = []
         for i, adv_agent in enumerate(stage['adverse_agents']):
-            agent = load_model(adv_agent['model_path'], env=env, device=device, position=i + 1)
-            adverse_agents.append(load_model(adv_agent['model_path'], env, device))
+            adv_agent = load_model(adv_agent['algorithm'], env=env, device=device, position=i + 1)
+            adverse_agents.append(adv_agent)
             
         if 'agent_parameters' in stage:
             for key, value in stage['agent_parameters'].items():

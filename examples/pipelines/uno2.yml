@@ -1,0 +1,63 @@
+info:
+  name: uno2
+  version: 0.1
+  description: uno pipeline
+  authors:
+    - name: Karol Lewcio
+      github: kaiks
+pipeline:
+  print_current_episode_info: true
+agent:
+  algorithm: dqn
+  network: mlp
+  lr: 0.001
+  discount_factor: 0.99
+  mlp_layers: [64, 64]
+env:
+  name: uno2
+  no_starting_cards: 1
+stages:
+  - name: stage1
+    adverse_agents:
+      - algorithm: random
+    env:
+      no_starting_cards: 1
+    num_episodes: 10000
+    evaluate_every: 1000
+    log_dir: experiments/dqn_04_17_v1
+    save_every: 5000
+  - name: stage2
+    adverse_agents:
+      - algorithm: uno-rule-v2
+    env:
+      no_starting_cards: 1
+    num_episodes: 10000
+    evaluate_every: 1000
+    log_dir: experiments/dqn_04_17_v2
+    save_every: 10000
+
+  - name: stage3
+    agent_parameters:
+      - train_t: 0
+      - total_t: 0
+    adverse_agents:
+      - algorithm: random
+    env:
+      no_starting_cards: 3
+    num_episodes: 10000
+    evaluate_every: 1000
+    log_dir: experiments/dqn_04_17_v3
+    save_every: 10000
+
+  - name: stage4
+    adverse_agents:
+      - algorithm: dqn
+        network: mlp
+        lr: 0.001
+        discount_factor: 0.99
+    environment:
+      name: uno2
+    evaluate_every: 1000
+    num_episodes: 50000
+    log_dir: experiments/dqn_04_17_v4
+    save_every: 20000

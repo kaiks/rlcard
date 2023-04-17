@@ -18,8 +18,9 @@ class Uno2Game:
         ''' Specifiy some game specific parameters, such as number of players
         '''
         self.num_players = game_config['game_num_players']
+        self.starting_cards = game_config['starting_cards']
 
-    def init_game(self, cards = 7):
+    def init_game(self):
         ''' Initialize players and state
 
         Returns:
@@ -28,7 +29,6 @@ class Uno2Game:
                 (dict): The first state in one game
                 (int): Current player's id
         '''
-        self.starting_cards = cards
         # Initalize payoffs
         self.payoffs = [0 for _ in range(self.num_players)]
 
@@ -41,7 +41,7 @@ class Uno2Game:
 
         # Deal 7 cards to each player to prepare for the game
         for player in self.players:
-            self.dealer.deal_cards(player, cards)
+            self.dealer.deal_cards(player, self.starting_cards)
 
         # Initialize a Round
         self.round = Round(self.dealer, self.num_players, self.np_random)

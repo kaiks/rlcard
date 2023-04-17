@@ -9,6 +9,7 @@ from rlcard.games.uno2.utils import cards2list
 
 DEFAULT_GAME_CONFIG = {
         'game_num_players': 2,
+        'starting_cards': 7
         }
 
 class UnoEnv(Env):

@@ -15,6 +15,24 @@ from rlcard.utils import (
     plot_curve,
 )
 
+def load_model(model_path, env=None, position=None, device=None):
+    if os.path.isfile(model_path):  # Torch model; assuming checkpoints
+        agent = torch.load(model_path, map_location=device)
+        agent.set_device(device)
+    elif os.path.isdir(model_path):  # CFR model
+        from rlcard.agents import CFRAgent
+        agent = CFRAgent(env, model_path)
+        agent.load()
+    elif model_path == 'random':  # Random model
+        from rlcard.agents import RandomAgent
+        agent = RandomAgent(num_actions=env.num_actions)
+    else:  # A model in the model zoo
+        from rlcard import models
+        agent = models.load(model_path).agents[position]
+    
+    return agent
+
+
 defaults = {
     'num_episodes': 100000,
     'evaluate_every': 1000,
@@ -22,7 +40,6 @@ defaults = {
 }
 
 def train_pipeline(pipeline_config):
-
     # Load pipeline configuration from the YAML file
     with open(pipeline_config, 'r') as file:
         config = yaml.safe_load(file)
@@ -49,6 +66,8 @@ def train_pipeline(pipeline_config):
             mlp_layers=config['agent']['mlp_layers'],
             device=device,
         )
+        
+    print_current_episode = config['pipeline']['print_current_episode_info']
 
     # Iterate through the pipeline stages
     for stage in config['stages']:
@@ -57,9 +76,13 @@ def train_pipeline(pipeline_config):
         current_config.update(stage)
         # Set adverse agents
         adverse_agents = []
-        for adv_agent in stage['adverse_agents']:
-            if adv_agent['algorithm'] == 'random':
-                adverse_agents.append(RandomAgent(num_actions=env.num_actions))
+        for i, adv_agent in enumerate(stage['adverse_agents']):
+            agent = load_model(adv_agent['model_path'], env=env, device=device, position=i + 1)
+            adverse_agents.append(load_model(adv_agent['model_path'], env, device))
+            
+        if 'agent_parameters' in stage:
+            for key, value in stage['agent_parameters'].items():
+                setattr(agent, key, value)
 
         # Set the environment parameters and agents
         env.set_agents([agent] + adverse_agents)
@@ -68,6 +91,9 @@ def train_pipeline(pipeline_config):
         # Start training
         with Logger(current_config['log_dir']) as logger:
             for episode in range(current_config['num_episodes']):
+                if print_current_episode:
+                    print(f'Current episode: {episode}')
+                
                 # Generate data from the environment
                 trajectories, payoffs = env.run(is_training=True)
 

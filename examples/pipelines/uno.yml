@@ -1,3 +1,12 @@
+info:
+  name: uno
+  version: 0.1
+  description: uno pipeline
+  authors:
+    - name: Karol Lewcio
+      github: kaiks
+pipeline:
+  print_current_episode_info: true
 agent:
   algorithm: dqn
   network: mlp

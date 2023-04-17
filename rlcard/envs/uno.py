@@ -9,6 +9,7 @@ from rlcard.games.uno.utils import cards2list
 
 DEFAULT_GAME_CONFIG = {
         'game_num_players': 2,
+        'starting_cards': 7
         }
 
 class UnoEnv(Env):
@@ -40,8 +41,6 @@ class UnoEnv(Env):
         legal_ids = self._get_legal_actions()
         if action_id in legal_ids:
             return ACTION_LIST[action_id]
-        # if (len(self.game.dealer.deck) + len(self.game.round.played_cards)) > 17:
-        #    return ACTION_LIST[60]
         return ACTION_LIST[np.random.choice(legal_ids)]
 
     def _get_legal_actions(self):

@@ -114,12 +114,6 @@ def train_pipeline(pipeline_config):
                         )[0]
                     )
 
-                # Save the model
-                if episode % current_config['save_every'] == 0:
-                    save_path = os.path.join(stage['log_dir'], f'model_{episode}.pth')
-                    torch.save(agent, save_path)
-                    print(f'Model saved in {save_path}')
-
         # Get the paths
         csv_path, fig_path = logger.csv_path, logger.fig_path
 

@@ -12,7 +12,8 @@ agent:
   network: mlp
   lr: 0.001
   discount_factor: 0.99
-  mlp_layers: [64, 64]
+  mlp_layers: [128, 64, 128]
+  save_every: 5000
 env:
   name: uno2
   no_starting_cards: 1
@@ -24,8 +25,9 @@ stages:
       no_starting_cards: 1
     num_episodes: 10000
     evaluate_every: 1000
+    agent_parameters:
+      save_path: experiments/dqn_04_17_v1
     log_dir: experiments/dqn_04_17_v1
-    save_every: 5000
   - name: stage2
     adverse_agents:
       - algorithm: uno-rule-v2
@@ -34,12 +36,16 @@ stages:
     num_episodes: 10000
     evaluate_every: 1000
     log_dir: experiments/dqn_04_17_v2
-    save_every: 10000
+    agent_parameters:
+      save_path: experiments/dqn_04_17_v2
+      save_every: 5000
 
   - name: stage3
     agent_parameters:
-      - train_t: 0
-      - total_t: 0
+      train_t: 0
+      total_t: 0
+      save_path: experiments/dqn_04_17_v3
+      save_every: 5000
     adverse_agents:
       - algorithm: random
     env:
@@ -47,17 +53,32 @@ stages:
     num_episodes: 10000
     evaluate_every: 1000
     log_dir: experiments/dqn_04_17_v3
-    save_every: 10000
-
+    
   - name: stage4
     adverse_agents:
-      - algorithm: dqn
-        network: mlp
-        lr: 0.001
-        discount_factor: 0.99
-    environment:
-      name: uno2
+      - algorithm: uno-rule-v2
+    # adverse_agents:
+    #   - algorithm: dqn
+    #     network: mlp
+    #     lr: 0.001
+    #     discount_factor: 0.99
+    env:
+      no_starting_cards: 3
     evaluate_every: 1000
-    num_episodes: 50000
+    num_episodes: 100000
     log_dir: experiments/dqn_04_17_v4
-    save_every: 20000
+    agent_parameters:
+      save_path: experiments/dqn_04_17_v4
+      save_every: 5000
+
+  - name: stage5
+    adverse_agents:
+      - algorithm: uno-rule-v2
+    env:
+      no_starting_cards: 7
+    evaluate_every: 1000
+    num_episodes: 100000
+    log_dir: experiments/dqn_04_17_v5
+    agent_parameters:
+      save_path: experiments/dqn_04_17_v5
+      save_every: 5000

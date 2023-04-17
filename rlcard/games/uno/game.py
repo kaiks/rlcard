@@ -13,11 +13,13 @@ class UnoGame:
         self.np_random = np.random.RandomState()
         self.num_players = num_players
         self.payoffs = [0 for _ in range(self.num_players)]
+        self.starting_cards = 7
 
     def configure(self, game_config):
         ''' Specifiy some game specific parameters, such as number of players
         '''
         self.num_players = game_config['game_num_players']
+        self.starting_cards = game_config['starting_cards']
 
     def init_game(self):
         ''' Initialize players and state
@@ -39,7 +41,7 @@ class UnoGame:
 
         # Deal 7 cards to each player to prepare for the game
         for player in self.players:
-            self.dealer.deal_cards(player, 7)
+            self.dealer.deal_cards(player, self.starting_cards)
 
         # Initialize a Round
         self.round = Round(self.dealer, self.num_players, self.np_random)

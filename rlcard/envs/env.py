@@ -30,13 +30,9 @@ class Env(object):
         # Game specific configurations
         # Currently only support blackjack、limit-holdem、no-limit-holdem
         # TODO support game configurations for all the games
-        supported_envs = ['blackjack', 'leduc-holdem', 'limit-holdem', 'no-limit-holdem']
+        supported_envs = ['blackjack', 'leduc-holdem', 'limit-holdem', 'no-limit-holdem', 'uno']
         if self.name in supported_envs:
-            _game_config = self.default_game_config.copy()
-            for key in config:
-                if key in _game_config:
-                    _game_config[key] = config[key]
-            self.game.configure(_game_config)
+            self.set_game_config(config)
 
         # Get the number of players/actions in this game
         self.num_players = self.game.get_num_players()
@@ -116,6 +112,20 @@ class Env(object):
             agents (list): List of Agent classes
         '''
         self.agents = agents
+        
+    def set_game_config(self, config):
+        '''
+        Set the configuration of the environment
+        
+        Args:
+            config (dict): A dictionary of configuration
+        '''
+        
+        _game_config = self.default_game_config.copy()
+        for key in config:
+            if key in _game_config:
+                _game_config[key] = config[key]
+        self.game.configure(_game_config)
 
     def run(self, is_training=False):
         '''

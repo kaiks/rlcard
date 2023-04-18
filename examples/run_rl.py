@@ -52,9 +52,7 @@ def train(args, pretrained_model = None):
     if args.algorithm == 'dqn':
         from rlcard.agents import DQNAgent
         if args.load_checkpoint_path != "":
-            dict = torch.load(args.load_checkpoint_path)
-            agent = DQNAgent.from_checkpoint(checkpoint = dict)
-            del dict
+            agent = DQNAgent.from_checkpoint(checkpoint=torch.load(args.load_checkpoint_path))
         else:
             agent = DQNAgent(
                 num_actions=env.num_actions,
@@ -67,9 +65,7 @@ def train(args, pretrained_model = None):
     elif args.algorithm == 'nfsp':
         from rlcard.agents import NFSPAgent
         if args.load_checkpoint_path != "":
-            dict = torch.load(args.load_checkpoint_path)
-            agent = NFSPAgent.from_checkpoint(checkpoint = dict)
-            del dict
+            agent = NFSPAgent.from_checkpoint(checkpoint=torch.load(args.load_checkpoint_path))
         else:
             agent = NFSPAgent(
                 num_actions=env.num_actions,
@@ -78,7 +74,7 @@ def train(args, pretrained_model = None):
                 q_mlp_layers=[96, 96, 96],
                 device=device,
                 save_path=args.log_dir,
-                save_every=10000
+                save_every=args.save_every
             )
     agents = [agent]
     
@@ -137,7 +133,7 @@ def train(args, pretrained_model = None):
     # torch.save(agent, save_path)
     # print('Model saved in', save_path)
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     parser = argparse.ArgumentParser("DQN/NFSP example in RLCard")
     parser.add_argument(
         '--env',

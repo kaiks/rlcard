@@ -59,9 +59,9 @@ class DQNAgent(object):
                  mlp_layers=None,
                  learning_rate=0.00005,
                  device=None,
-                 save_every=-1,
+                 save_path=None,
                  training_mode = True,
-                 save_path=None):
+                 save_every=float('inf'),):
 
         '''
         Q-Learning algorithm for off-policy TD control using Function Approximation.
@@ -124,7 +124,7 @@ class DQNAgent(object):
 
         # The epsilon decay scheduler
         self.epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
-        
+
         # Create estimators
         self.q_estimator = Estimator(num_actions=num_actions, learning_rate=learning_rate, state_shape=state_shape, \
             mlp_layers=mlp_layers, device=self.device)
@@ -263,10 +263,10 @@ class DQNAgent(object):
         # Update the target estimator
         if self.train_t % self.update_target_estimator_every == 0: 
             # this could maybe be eliminated with the soft update set to 0.001
+            self.target_estimator.soft_update_from(self.q_estimator, 0.01)
             print("\nINFO - Copied model parameters to target network.")
-            self.target_estimator.soft_update_from(self.q_estimator, 0.01)            
 
-        if self.save_path and (self.train_t % self.save_every) == 0:
+        if self.save_path and self.train_t % self.save_every == 0:
             # To preserve every checkpoint separately, 
             # add another argument to the function call parameterized by self.train_t
             self.save_checkpoint(self.save_path)
@@ -349,17 +349,7 @@ class DQNAgent(object):
         
         
         return agent_instance
-             
-        
-
-    def save(self, path):
-        ''' Save the model (q_estimator weights only)
-
-        Args:
-            path (str): the path to save the model
-        '''
-        torch.save(self.q_estimator.model.state_dict(), path)
-        
+                     
     def save_checkpoint(self, path, filename='checkpoint_dqn.pt'):
         ''' Save the model checkpoint (all attributes)
 

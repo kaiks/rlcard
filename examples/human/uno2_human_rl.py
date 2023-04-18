@@ -14,7 +14,7 @@ from rlcard.utils import (
     tournament,
     reorganize,
 )
-
+import torch
 parser = argparse.ArgumentParser("DQN/NFSP human play in RLCard")
 parser.add_argument(
     '--load_model_path',
@@ -28,10 +28,13 @@ human_agent = HumanAgent(env.num_actions)
 
 device = get_device()
 # if model path includes 'dqn', then use DQNAgent, otherwise use NFSPAgent
+checkpoint = torch.load(args.load_model_path, map_location=device)
+
 if 'dqn' in args.load_model_path:
-    rl_agent = DQNAgent.from_checkpoint(args.load_model_path)
+    rl_agent = DQNAgent.from_checkpoint(checkpoint)
 else:
-    rl_agent = NFSPAgent.from_checkpoint(args.load_model_path)
+    rl_agent = NFSPAgent.from_checkpoint(checkpoint)
+del checkpoint
 
 env.set_agents([
     human_agent,

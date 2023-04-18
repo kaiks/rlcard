@@ -28,10 +28,10 @@ human_agent = HumanAgent(env.num_actions)
 
 device = get_device()
 # if model path includes 'dqn', then use DQNAgent, otherwise use NFSPAgent
-if 'dqn' in args.load_model_dir:
-    rl_agent = DQNAgent.from_checkpoint(args.load_model_dir)
+if 'dqn' in args.load_model_path:
+    rl_agent = DQNAgent.from_checkpoint(args.load_model_path)
 else:
-    rl_agent = NFSPAgent.from_checkpoint(args.load_model_dir)
+    rl_agent = NFSPAgent.from_checkpoint(args.load_model_path)
 
 env.set_agents([
     human_agent,

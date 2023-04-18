@@ -17,7 +17,7 @@ from rlcard.utils import (
 
 parser = argparse.ArgumentParser("DQN/NFSP human play in RLCard")
 parser.add_argument(
-    '--load_model_dir',
+    '--load_model_path',
     type=str,
     default=None,
 )
@@ -29,17 +29,9 @@ human_agent = HumanAgent(env.num_actions)
 device = get_device()
 # if model path includes 'dqn', then use DQNAgent, otherwise use NFSPAgent
 if 'dqn' in args.load_model_dir:
-    rl_agent = DQNAgent(
-            num_actions=env.num_actions,
-            state_shape=env.state_shape[0],
-            mlp_layers=[64,64],
-            device=device,
-            save_every=1000000,
-        )
+    rl_agent = DQNAgent.from_checkpoint(args.load_model_dir)
 else:
-    rl_agent = NFSPAgent()
-
-rl_agent.load(args.load_model_dir)
+    rl_agent = NFSPAgent.from_checkpoint(args.load_model_dir)
 
 env.set_agents([
     human_agent,

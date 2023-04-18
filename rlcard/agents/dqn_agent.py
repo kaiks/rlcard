@@ -32,7 +32,7 @@ import torch.nn as nn
 from collections import namedtuple
 import os
 import pickle
-import copy
+from copy import deepcopy
 
 
 from rlcard.utils.utils import remove_illegal

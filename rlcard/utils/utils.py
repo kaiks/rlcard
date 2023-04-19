@@ -148,21 +148,22 @@ def print_card(cards):
     for line in lines:
         print ('   '.join(line))
 
-def discounted_reward(step, base_reward = 1, discount = 0.99):
-    ''' Compute the discounted reward
+def total_reward(new_state, base_reward = 1):
+    ''' Compute the total reward
 
     Args:
-        step (int): The step of the transition
+        new_state (list): The new state
         base_reward (float): The base reward
-        discount (float): The discount factor
     '''
+    # new state is present because otherwise the reward is determined straight from the payoff
+    hand_size_punishment = len(new_state['raw_obs']['hand']) * 0.05
 
-    return base_reward * (discount ** step)
+    return base_reward - hand_size_punishment
 
 def reorganize(trajectories, payoffs):
     ''' Reorganize the trajectory to make it RL friendly
-    trajectories[n] is a list of transitions for player n
-    Each transition is a list of [state, action, reward, next_state, done]
+    trajectories[n] is a list of transitions
+    It's organized as [state, action, state, action, state, ...]
 
     Args:
         trajectory (list): A list of trajectories
@@ -177,19 +178,17 @@ def reorganize(trajectories, payoffs):
 
     for player in range(num_players):
         # Loop through each transition in the player's trajectory
-        total_turn_count = len(trajectories[player])-3
+        # total_turn_count = len(trajectories[player])/2
         for i in range(0, len(trajectories[player])-2, 2):
             # If this is the last transition, set reward and done flags accordingly
+            state, action, next_state = trajectories[player][i:i+3]
             if i == len(trajectories[player])-3:
                 reward = payoffs[player]
                 done = True
             else:
-                #decay_factor = min(1.0, (len(trajectories[player]) - i) / 1000.0)
-                turn_from_end = total_turn_count - i
-                reward = discounted_reward(turn_from_end, payoffs[player])  if (turn_from_end - i) < 100 else 0.001 * payoffs[player]
+                reward = total_reward(next_state, payoffs[player])
                 done = False
             # Create a new transition with reward and done flags
-            state, action, next_state = trajectories[player][i:i+3]
             new_transition = [state, action, reward, next_state, done]
             # Add the new transition to the player's new trajectory
             new_trajectories[player].append(new_transition)

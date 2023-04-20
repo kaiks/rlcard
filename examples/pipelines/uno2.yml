@@ -9,43 +9,34 @@ pipeline:
   print_current_episode_info: true
 agent:
   algorithm: dqn
+  checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
   parameters:
-    learning_rate: 0.00001
+    learning_rate: 0.0001
     discount_factor: 0.9
-    update_target_estimator_every: 2000
-    mlp_layers: [128, 128, 128]
-    save_every: 50000
+    update_target_estimator_every: 100
+    mlp_layers: [64, 64, 64, 64, 64, 64]
 env:
   name: uno2
-  no_starting_cards: 1
+  no_starting_cards: 7
 stages:
   - name: stage1
     adverse_agents:
       - algorithm: uno-rule-v2
     env:
-      no_starting_cards: 1
-    num_episodes: 1000000
-    evaluate_every: 1000
-    agent_parameters:
-      save_path: experiments/dqn_04_20_v1
-    log_dir: experiments/dqn_04_20_v1
-  - name: stage2
-    adverse_agents:
-      - algorithm: uno-rule-v2
-    env:
       no_starting_cards: 7
-    num_episodes: 100000
+    num_episodes: 10000000
+    num_eval_games: 10000
     evaluate_every: 1000
-    log_dir: experiments/dqn_04_20_v2
     agent_parameters:
-      save_path: experiments/dqn_04_20_v2
+      save_path: experiments/dqn_04_21_v1
       save_every: 5000
+    log_dir: experiments/dqn_04_21_v1
 
   # - name: stage3
   #   agent_parameters:
   #     train_t: 0
   #     total_t: 0
-  #     save_path: experiments/dqn_04_20_v3
+  #     save_path: experiments/dqn_04_20_2_v3
   #     save_every: 5000
   #     discount_factor: 0.99
   #   adverse_agents:
@@ -54,7 +45,7 @@ stages:
   #     no_starting_cards: 3
   #   num_episodes: 100000
   #   evaluate_every: 1000
-  #   log_dir: experiments/dqn_04_20_v3
+  #   log_dir: experiments/dqn_04_20_2_v3
     
   # - name: stage4
   #   adverse_agents:
@@ -64,9 +55,9 @@ stages:
   #   evaluate_every: 10000
   #   num_eval_games: 1000
   #   num_episodes: 500000
-  #   log_dir: experiments/dqn_04_20_v4
+  #   log_dir: experiments/dqn_04_20_2_v4
   #   agent_parameters:
-  #     save_path: experiments/dqn_04_20_v4
+  #     save_path: experiments/dqn_04_20_2_v4
   #     save_every: 5000
   #     learning_rate: 0.001
   #     total_t: 0
@@ -81,8 +72,8 @@ stages:
   #   evaluate_every: 10000
   #   num_eval_games: 1000
   #   num_episodes: 500000
-  #   log_dir: experiments/dqn_04_20_v5
+  #   log_dir: experiments/dqn_04_20_2_v5
   #   agent_parameters:
-  #     save_path: experiments/dqn_04_20_v5
+  #     save_path: experiments/dqn_04_20_2_v5
   #     save_every: 5000
   #     learning_rate: 0.0001

@@ -5,7 +5,7 @@ import yaml
 import torch
 
 import rlcard
-from rlcard.agents import RandomAgent
+from rlcard.agents import RandomAgent, DQNAgent, NFSPAgent
 from rlcard.utils import (
     get_device,
     set_seed,
@@ -15,20 +15,30 @@ from rlcard.utils import (
     plot_curve,
 )
 
-def load_model(model_path, env=None, position=None, device=None):
-    if os.path.isfile(model_path):  # Torch model; assuming checkpoints
-        agent = torch.load(model_path, map_location=device)
+def load_agent_from_checkpoint(checkpoint_data):
+    agent_class = getattr(rlcard.agents, checkpoint_data['agent_type'])
+    return agent_class.from_checkpoint(checkpoint_data)
+
+def load_model(model, env, position=None, device=None):
+    if os.path.isfile(model):  # Torch model; assuming checkpoints
+        agent_data = torch.load(model, map_location=device)
+        if isinstance(agent_data, dict) and 'agent_type' in agent_data:
+            print(f"Loading {agent_data['agent_type']} agent from checkpoint.")
+            agent = load_agent_from_checkpoint(agent_data)
+        else:
+            print("No agent type identified. Assuming we can load it from the model path using just torch.")
+            agent = agent_data
         agent.set_device(device)
-    elif os.path.isdir(model_path):  # CFR model
+    elif os.path.isdir(model):  # CFR model
         from rlcard.agents import CFRAgent
-        agent = CFRAgent(env, model_path)
+        agent = CFRAgent(env, model)
         agent.load()
-    elif model_path == 'random':  # Random model
+    elif model == 'random':  # Random model
         from rlcard.agents import RandomAgent
         agent = RandomAgent(num_actions=env.num_actions)
     else:  # A model in the model zoo
         from rlcard import models
-        agent = models.load(model_path).agents[position]
+        agent = models.load(model).agents[position]
     
     return agent
 
@@ -57,20 +67,23 @@ def train_pipeline(pipeline_config):
     # Make the environment
     env = rlcard.make(config['env']['name'])
 
-    # Initialize the agent
-    if config['agent']['algorithm'] == 'dqn':
-        from rlcard.agents import DQNAgent
-        
+    # Initialize the agent    
+    if 'checkpoint_path' in config['agent']:
+        print(f"Loading agent from checkpoint: {config['agent']['checkpoint_path']}")
+        print(f"Configuration parameters will be ignored.")
+        agent = load_model(config['agent']['checkpoint_path'], env, device=device)
+    elif config['agent']['algorithm'] == 'dqn':
         agent = DQNAgent(
             num_actions=env.num_actions,
             state_shape=env.state_shape[0],
             device=device,
             **config['agent']['parameters']
-        )        
+        )
     print_current_episode = config['pipeline']['print_current_episode_info']
 
     # Iterate through the pipeline stages
     for stage in config['stages']:
+        best_reward = -99999999
         print(f'Running stage: {stage["name"]}')
         current_config = defaults.copy()
         current_config.update(stage)
@@ -106,13 +119,12 @@ def train_pipeline(pipeline_config):
 
                 # Evaluate the performance. Play with random agents.
                 if episode % current_config['evaluate_every'] == 0:
-                    logger.log_performance(
-                        episode,
-                        tournament(
-                            env,
-                            current_config['num_eval_games'],
-                        )[0]
-                    )
+                    tournament_payoffs = tournament(env, current_config['num_eval_games'])
+                    logger.log_performance(episode,tournament_payoffs[0])
+                    if tournament_payoffs[0] > best_reward:
+                        best_reward = tournament_payoffs[0]
+                        agent.save_checkpoint(current_config['log_dir'], 'best_model.pt')
+                        print('Model saved in episode #{} with reward {}'.format(episode, best_reward))
 
         # Get the paths
         csv_path, fig_path = logger.csv_path, logger.fig_path

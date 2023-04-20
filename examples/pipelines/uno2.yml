@@ -25,8 +25,8 @@ stages:
     env:
       no_starting_cards: 7
     num_episodes: 10000000
-    num_eval_games: 10000
-    evaluate_every: 1000
+    num_eval_games: 1000
+    evaluate_every: 10000
     agent_parameters:
       save_path: experiments/dqn_04_21_v1
       save_every: 5000

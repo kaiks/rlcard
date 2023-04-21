@@ -87,27 +87,28 @@ def encode_hand(plane, hand):
     ''' Encode hand and represerve it into plane
 
     Args:
-        plane (array): 3*4*15 numpy array
+        plane (array): 2*4*15 numpy array
         hand (list): list of string of hand's card
 
     Returns:
-        (array): 3*4*15 numpy array
+        (array): 2*4*15 numpy array
     '''
-    # plane = np.zeros((3, 4, 15), dtype=int)
-    plane[0] = np.ones((4, 15), dtype=int)
     hand = hand2dict(hand)
     for card, count in hand.items():
         card_info = card.split('-')
         color = COLOR_MAP[card_info[0]]
         trait = TRAIT_MAP[card_info[1]]
         if trait >= 13:
-            if plane[1][0][trait] == 0:
-                for index in range(4):
-                    plane[0][index][trait] = 0
-                    plane[1][index][trait] = 1
+            for color_index in range(4):
+                if count > 0:
+                    plane[0][color_index][trait] = 1
+                if count > 1:
+                    plane[1][color_index][trait] = 1
         else:
-            plane[0][color][trait] = 0
-            plane[count][color][trait] = 1
+            if count > 0:
+                plane[0][color][trait] = 1
+            if count > 1:
+                plane[1][color][trait] = 1
     return plane
 
 def encode_target(plane, target):

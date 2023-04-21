@@ -4,7 +4,7 @@ import numpy as np
 from rlcard.games.uno2 import Dealer
 from rlcard.games.uno2 import Player
 from rlcard.games.uno2 import Round
-
+# from rlcard.games.uno2 import UnoCard
 
 class Uno2Game:
     def __init__(self, allow_step_back=False, num_players=2, starting_cards=7):
@@ -109,6 +109,32 @@ class Uno2Game:
         state['played_wild_4'] = self.dealer.played_wild_4
         state['enemy_hand_size'] = len(self.players[1 - player_id].hand) # TODO: generalize
         return state
+    
+    # def hand_score(self, hand):
+    #     ''' Return player's hand score
+
+    #     Args:
+    #         player_id (int): player id
+
+    #     Returns:
+    #         (int): The score of the player's hand
+    #     '''
+
+    #     total_score = 0
+    #     for card_string in hand:
+    #         card = UnoCard.init_with_str(card_string)
+    #         total_score += card.score
+    #     return total_score
+    
+    # def compute_reward(outcome, points, max_points=120, loss_reward=-1, base_reward=0.5):
+    #     if outcome == -1:
+    #         return loss_reward
+    #     elif outcome == 0:
+    #         return 0
+    #     else:  # outcome == 1
+    #         point_based_reward = points / max_points
+    #         reward = base_victory_reward + point_based_reward
+    #         return reward
 
     def get_payoffs(self):
         ''' Return the payoffs of the game
@@ -118,9 +144,7 @@ class Uno2Game:
         '''
         winner = self.round.winner
         if winner is not None and len(winner) == 1:
-            self.payoffs[winner[0]] = 1 - self.round.turn / 5000
-            if self.payoffs[winner[0]] < 0:
-                self.payoffs[winner[0]] = 0
+            self.payoffs[winner[0]] = 1
             self.payoffs[1 - winner[0]] = -1
         else:
             # assign the payoff -1 to all players

@@ -9,12 +9,12 @@ pipeline:
   print_current_episode_info: true
 agent:
   algorithm: dqn
-  checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
+  # checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
   parameters:
     learning_rate: 0.0001
     discount_factor: 0.9
     update_target_estimator_every: 100
-    mlp_layers: [64, 64, 64, 64, 64, 64]
+    mlp_layers: [240, 240, 240]
 env:
   name: uno2
   no_starting_cards: 7
@@ -23,14 +23,27 @@ stages:
     adverse_agents:
       - algorithm: uno-rule-v2
     env:
+      no_starting_cards: 1
+    num_episodes: 10000
+    num_eval_games: 100
+    evaluate_every: 1000
+    agent_parameters:
+      save_path: experiments/dqn_04_22_v1
+      save_every: 5000
+    log_dir: experiments/dqn_04_22_v1
+  - name: stage2
+    adverse_agents:
+      - algorithm: uno-rule-v2
+    env:
       no_starting_cards: 7
-    num_episodes: 10000000
+    num_episodes: 1000000
     num_eval_games: 1000
     evaluate_every: 10000
     agent_parameters:
-      save_path: experiments/dqn_04_21_v1
+      save_path: experiments/dqn_04_22_v2
       save_every: 5000
-    log_dir: experiments/dqn_04_21_v1
+      discount_factor: 0.99
+    log_dir: experiments/dqn_04_22_v2
 
   # - name: stage3
   #   agent_parameters:

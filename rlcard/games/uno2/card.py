@@ -20,6 +20,26 @@ class UnoCard:
         self.color = color
         self.trait = trait
         self.str = self.get_str()
+        
+    @classmethod
+    def init_with_str(cls, card_str):
+        ''' Initialize the class of UnoCard with a string
+
+        Args:
+            card_str (str): The string of card
+
+        Return:
+            (UnoCard): The UnoCard object
+        '''
+        color, trait = card_str.split('-')
+        if trait in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+            card_type = 'number'
+        elif trait in ['skip', 'reverse', 'draw_2']:
+            card_type = 'action'
+        else:
+            card_type = 'wild'
+
+        return cls(card_type, color, trait)
 
     def get_str(self):
         ''' Get the string representation of card
@@ -37,6 +57,25 @@ class UnoCard:
             (bool): True if the card is playable
         '''
         return self.trait == 'draw_2' or self.trait == 'wild_draw_4' or self.trait == 'reverse'
+    
+    def score(self):
+        ''' Get the score of the card
+
+        Return:
+            (int): The score of the card
+        '''
+        if self.trait == 'wild_draw_4':
+            return 50
+        elif self.trait == 'draw_2':
+            return 20
+        elif self.trait == 'skip':
+            return 20
+        elif self.trait == 'reverse':
+            return 20
+        elif self.trait == 'wild':
+            return 50
+        else:
+            return int(self.trait)
 
 
     @staticmethod

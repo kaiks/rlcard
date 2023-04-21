@@ -19,16 +19,20 @@ class UnoEnv(Env):
         self.default_game_config = DEFAULT_GAME_CONFIG
         self.game = Game()
         super().__init__(config)
-        self.state_shape = [[5, 4, 15] for _ in range(self.num_players)]
+        self.state_shape = [[4, 4, 15] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
 
     def _extract_state(self, state):
         # print('\nState: ', state)
-        obs = np.zeros((5, 4, 15), dtype=int)
-        encode_hand(obs[:3], state['hand'])
-        encode_target(obs[3], state['target'])
-        encode_enemy_hand_size(obs[4], state['enemy_hand_size'])
-        encode_war_stack(obs[4], state['war_stack_size'], state['played_wild_4'])
+        obs = np.zeros((4, 4, 15), dtype=float)
+        encode_hand(obs[:2], state['hand'])
+        encode_target(obs[2], state['target'])
+        obs[3][0][0] = min(state['enemy_hand_size'] / 15, 1)
+        if state['war_stack_size'] > 0:
+            obs[3][0][1] = 1
+        obs[3][0][2] = min(state['war_stack_size'] / 15, 1)
+        if state['played_wild_4']:
+            obs[3][0][3] = 1
         legal_action_id = self._get_legal_actions()
         extracted_state = {'obs': obs, 'legal_actions': legal_action_id}
         extracted_state['raw_obs'] = state

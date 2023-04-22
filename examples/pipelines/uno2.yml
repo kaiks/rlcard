@@ -12,12 +12,14 @@ agent:
   # checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
   parameters:
     learning_rate: 0.0001
-    discount_factor: 0.9
+    discount_factor: 0.99
     update_target_estimator_every: 100
     mlp_layers: [120, 120, 120, 120, 120, 120]
     replay_memory_size: 10000
     replay_memory_init_size: 1000
     batch_size: 256
+    epsilon_end: 0.001
+    epsilon_decay_steps: 8000000 
 env:
   name: uno2
   no_starting_cards: 7
@@ -45,7 +47,7 @@ stages:
     agent_parameters:
       save_path: experiments/dqn_04_22_2_v2
       save_every: 5000
-      discount_factor: 0.99
+      discount_factor: 0.9
     log_dir: experiments/dqn_04_22_2_v2
 
   # - name: stage3

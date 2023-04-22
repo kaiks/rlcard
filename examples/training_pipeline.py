@@ -66,7 +66,7 @@ def train_pipeline(pipeline_config):
 
     # Make the environment
     env = rlcard.make(config['env']['name'])
-
+    
     # Initialize the agent    
     if 'checkpoint_path' in config['agent']:
         print(f"Loading agent from checkpoint: {config['agent']['checkpoint_path']}")

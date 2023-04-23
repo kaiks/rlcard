@@ -33,6 +33,7 @@ class UnoEnv(Env):
         obs[3][0][2] = min(state['war_stack_size'] / 15, 1)
         if state['played_wild_4']:
             obs[3][0][3] = 1
+        obs[3][0][4] = min(len(state['hand']) / 15, 1)
         legal_action_id = self._get_legal_actions()
         extracted_state = {'obs': obs, 'legal_actions': legal_action_id}
         extracted_state['raw_obs'] = state

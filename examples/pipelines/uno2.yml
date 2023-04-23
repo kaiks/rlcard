@@ -18,7 +18,7 @@ agent:
     replay_memory_size: 10000
     replay_memory_init_size: 1000
     batch_size: 256
-    epsilon_end: 0.001
+    epsilon_end: 0.0001
     epsilon_decay_steps: 8000000 
 env:
   name: uno2
@@ -33,9 +33,9 @@ stages:
     num_eval_games: 100
     evaluate_every: 1000
     agent_parameters:
-      save_path: experiments/dqn_04_22_2_v1
+      save_path: experiments/dqn_04_24
       save_every: 5000
-    log_dir: experiments/dqn_04_22_2_v1
+    log_dir: experiments/dqn_04_24
   - name: stage2
     adverse_agents:
       - algorithm: uno-rule-v2
@@ -45,10 +45,10 @@ stages:
     num_eval_games: 1000
     evaluate_every: 10000
     agent_parameters:
-      save_path: experiments/dqn_04_22_2_v2
+      save_path: experiments/dqn_04_24_2
       save_every: 5000
       discount_factor: 0.9
-    log_dir: experiments/dqn_04_22_2_v2
+    log_dir: experiments/dqn_04_24_2
 
   # - name: stage3
   #   agent_parameters:

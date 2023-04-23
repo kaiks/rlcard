@@ -30,9 +30,6 @@ import torch.nn.functional as F
 from rlcard.agents.dqn_agent import DQNAgent
 from rlcard.utils.utils import remove_illegal
 
-import os
-import pickle
-
 Transition = collections.namedtuple('Transition', 'info_state action_probs')
 
 class NFSPAgent(object):
@@ -47,17 +44,17 @@ class NFSPAgent(object):
                  num_actions=4,
                  state_shape=None,
                  hidden_layers_sizes=None,
-                 reservoir_buffer_capacity=40000,
+                 reservoir_buffer_capacity=20000,
                  anticipatory_param=0.1,
                  batch_size=256,
                  train_every=1,
                  rl_learning_rate=0.1,
                  sl_learning_rate=0.005,
                  min_buffer_size_to_learn=100,
-                 q_replay_memory_size=40000,
+                 q_replay_memory_size=20000,
                  q_replay_memory_init_size=100,
                  q_update_target_estimator_every=1000,
-                 q_discount_factor=0.90,
+                 q_discount_factor=0.99,
                  q_epsilon_start=0.06,
                  q_epsilon_end=0,
                  q_epsilon_decay_steps=int(1e6),
@@ -95,28 +92,20 @@ class NFSPAgent(object):
             q_mlp_layers (list): The layer sizes of inner DQN agent.
             device (torch.device): Whether to use the cpu or gpu
         '''
-        # Store all init parameters
         self.use_raw = False
         self._num_actions = num_actions
         self._state_shape = state_shape
-        self._hidden_layers_sizes = hidden_layers_sizes
         self._layer_sizes = hidden_layers_sizes + [num_actions]
         self._batch_size = batch_size
         self._train_every = train_every
-        self._rl_learning_rate = rl_learning_rate
         self._sl_learning_rate = sl_learning_rate
         self._anticipatory_param = anticipatory_param
         self._min_buffer_size_to_learn = min_buffer_size_to_learn
 
-        self._reservoir_buffer_capacity = reservoir_buffer_capacity
         self._reservoir_buffer = ReservoirBuffer(reservoir_buffer_capacity)
         self._prev_timestep = None
         self._prev_action = None
         self.evaluate_with = evaluate_with
-
-        self.anticipatory_param = anticipatory_param
-
-        self._debug = False
 
         if device is None:
             self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -149,16 +138,15 @@ class NFSPAgent(object):
         '''
 
         # configure the average policy network
-        policy_network = AveragePolicyNetwork(self._num_actions, self._state_shape, self._layer_sizes, params)
+        policy_network = AveragePolicyNetwork(self._num_actions, self._state_shape, self._layer_sizes)
         policy_network = policy_network.to(self.device)
         self.policy_network = policy_network
         self.policy_network.eval()
 
         # xavier init
-        if params is None:
-            for p in self.policy_network.parameters():
-                if len(p.data.shape) > 1:
-                    nn.init.xavier_uniform_(p.data)
+        for p in self.policy_network.parameters():
+            if len(p.data.shape) > 1:
+                nn.init.xavier_uniform_(p.data)
 
         # configure optimizer
         self.policy_network_optimizer = torch.optim.Adam(self.policy_network.parameters(), lr=self._sl_learning_rate)
@@ -174,12 +162,6 @@ class NFSPAgent(object):
         if self.total_t>0 and len(self._reservoir_buffer) >= self._min_buffer_size_to_learn and self.total_t%self._train_every == 0:
             sl_loss  = self.train_sl()
             print('\rINFO - Step {}, sl-loss: {}'.format(self.total_t, sl_loss), end='')
-
-        if self.total_t % self.save_every == 0 and self.model_dir is not None:
-            print("\nINFO - Saving model...")
-            self.save_checkpoint(self.save_path)
-            print("\nINFO - Saved model.")
-
 
     def step(self, state):
         ''' Returns the action to be taken.
@@ -398,7 +380,7 @@ class AveragePolicyNetwork(nn.Module):
     log probabilities of actions.
     '''
 
-    def __init__(self, num_actions=2, state_shape=None, mlp_layers=None, params=None):
+    def __init__(self, num_actions=2, state_shape=None, mlp_layers=None):
         ''' Initialize the policy network.  It's just a bunch of ReLU
         layers with no activation on the final one, initialized with
         Xavier (sonnet.nets.MLP and tensorflow defaults)
@@ -407,7 +389,6 @@ class AveragePolicyNetwork(nn.Module):
             num_actions (int): number of output actions
             state_shape (list): shape of state tensor for each sample
             mlp_laters (list): output size of each mlp layer including final
-            params (dict): dictionary of parameters to initialize network with
         '''
         super(AveragePolicyNetwork, self).__init__()
 
@@ -424,11 +405,6 @@ class AveragePolicyNetwork(nn.Module):
             if i != len(layer_dims) - 2: # all but final have relu
                 mlp.append(nn.ReLU())
         self.mlp = nn.Sequential(*mlp)
-
-        # load the parameters if given
-        if params is not None:
-            self.load_state_dict(params)
-
 
     def forward(self, s):
         ''' Log action probabilities of each action from state
@@ -546,15 +522,4 @@ class ReservoirBuffer(object):
 
     def __iter__(self):
         return iter(self._data)
-
-    def save(self, path):
-        data = { 'data': self._data, 'add_calls': self._add_calls }
-        with open(path + '/reservoir_buffer.bin', 'wb') as f:
-            pickle.dump(data, f)
-
-    def load(self, path):
-        with open(path + '/reservoir_buffer.bin', 'rb') as f:
-            data = pickle.load(f)
-        self._data = data['data']
-        self._add_calls = data['add_calls']
 

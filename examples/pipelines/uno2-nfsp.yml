@@ -1,0 +1,101 @@
+info:
+  name: uno2
+  version: 0.1
+  description: uno pipeline
+  authors:
+    - name: Karol Lewcio
+      github: kaiks
+pipeline:
+  print_current_episode_info: true
+agent:
+  algorithm: nfsp
+  # checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
+  parameters:
+    q_discount_factor: 0.99
+    q_update_target_estimator_every: 100
+    hidden_layers_sizes: [120, 120, 120, 120, 120, 120]
+    q_mlp_layers: [120, 120, 120, 120, 120, 120]
+    q_replay_memory_size: 10000
+    q_replay_memory_init_size: 1000
+    q_batch_size: 256
+    train_every: 100
+    q_train_every: 10
+    rl_learning_rate: 0.001
+    batch_size: 256
+    q_epsilon_end: 0.001
+    q_epsilon_decay_steps: 8000000 
+env:
+  name: uno2
+  no_starting_cards: 7
+stages:
+  - name: stage1
+    adverse_agents:
+      - algorithm: uno-rule-v2
+    env:
+      no_starting_cards: 1
+    num_episodes: 50000
+    num_eval_games: 100
+    evaluate_every: 1000
+    agent_parameters:
+      save_path: experiments/nfsp_04_23_1
+      save_every: 5000
+    log_dir: experiments/nsfp_04_23_1
+  - name: stage2
+    adverse_agents:
+      - algorithm: uno-rule-v2
+    env:
+      no_starting_cards: 7
+    num_episodes: 250000
+    num_eval_games: 1000
+    evaluate_every: 10000
+    agent_parameters:
+      save_path: experiments/nfsp_04_23_2
+      save_every: 5000
+      q_discount_factor: 0.9
+    log_dir: experiments/nfsp_04_23_2
+
+  # - name: stage3
+  #   agent_parameters:
+  #     train_t: 0
+  #     total_t: 0
+  #     save_path: experiments/dqn_04_20_2_v3
+  #     save_every: 5000
+  #     discount_factor: 0.99
+  #   adverse_agents:
+  #     - algorithm: random
+  #   env:
+  #     no_starting_cards: 3
+  #   num_episodes: 100000
+  #   evaluate_every: 1000
+  #   log_dir: experiments/dqn_04_20_2_v3
+    
+  # - name: stage4
+  #   adverse_agents:
+  #     - algorithm: uno-rule-v2
+  #   env:
+  #     no_starting_cards: 3
+  #   evaluate_every: 10000
+  #   num_eval_games: 1000
+  #   num_episodes: 500000
+  #   log_dir: experiments/dqn_04_20_2_v4
+  #   agent_parameters:
+  #     save_path: experiments/dqn_04_20_2_v4
+  #     save_every: 5000
+  #     learning_rate: 0.001
+  #     total_t: 0
+  #     train_t: 0
+
+
+  # - name: stage5
+  #   adverse_agents:
+  #     - algorithm: uno-rule-v2
+  #   env:
+  #     no_starting_cards: 7
+  #   evaluate_every: 10000
+  #   num_eval_games: 1000
+  #   num_episodes: 500000
+  #   log_dir: experiments/dqn_04_20_2_v5
+  #   agent_parameters:
+  #     save_path: experiments/dqn_04_20_2_v5
+  #     save_every: 5000
+  #     learning_rate: 0.0001

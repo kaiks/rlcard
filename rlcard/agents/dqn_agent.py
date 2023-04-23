@@ -312,7 +312,7 @@ class DQNAgent(object):
             'batch_size': self.batch_size,
             'num_actions': self.num_actions,
             'train_every': self.train_every,
-            'device': self.device
+            'device': self.device,
         }
         
     @classmethod
@@ -337,7 +337,7 @@ class DQNAgent(object):
             device=checkpoint['device'], 
             state_shape=checkpoint['q_estimator']['state_shape'],
             mlp_layers=checkpoint['q_estimator']['mlp_layers'],
-            train_every=checkpoint['train_every']
+            train_every=checkpoint['train_every'],
         )
         
         agent_instance.total_t = checkpoint['total_t']

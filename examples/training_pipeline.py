@@ -79,6 +79,13 @@ def train_pipeline(pipeline_config):
             device=device,
             **config['agent']['parameters']
         )
+    elif config['agent']['algorithm'] == 'nfsp':
+        agent = NFSPAgent(
+            num_actions=env.num_actions,
+            state_shape=env.state_shape[0],
+            device=device,
+            **config['agent']['parameters']
+        )
     print_current_episode = config['pipeline']['print_current_episode_info']
 
     # Iterate through the pipeline stages

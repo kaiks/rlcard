@@ -498,7 +498,7 @@ class Estimator(object):
 
 class EstimatorNetwork(nn.Module):
     ''' The function approximation network for Estimator
-        It is just a series of tanh layers. All in/out are torch.tensor
+        It is just a series of ReLU layers. All in/out are torch.tensor
     '''
 
     def __init__(self, num_actions=2, state_shape=None, mlp_layers=None):
@@ -521,7 +521,7 @@ class EstimatorNetwork(nn.Module):
         fc.append(nn.BatchNorm1d(layer_dims[0]))
         for i in range(len(layer_dims)-1):
             fc.append(nn.Linear(layer_dims[i], layer_dims[i+1], bias=True))
-            fc.append(nn.Tanh())
+            fc.append(nn.ReLU())  # Replaced Tanh with ReLU
         fc.append(nn.Linear(layer_dims[-1], self.num_actions, bias=True))
         self.fc_layers = nn.Sequential(*fc)
 

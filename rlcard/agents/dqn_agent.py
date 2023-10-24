@@ -104,7 +104,7 @@ class DQNAgent(object):
         self.state_shape = state_shape
         self.mlp_layers = mlp_layers
         self.training_mode = training_mode
-        
+
         # Torch device
         if device is None:
             self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -131,10 +131,15 @@ class DQNAgent(object):
         self.target_estimator = Estimator(num_actions=num_actions, learning_rate=learning_rate, state_shape=state_shape, \
             mlp_layers=mlp_layers, device=self.device)
 
+        self.per = True
+
         # Create replay memory
         if self.training_mode:
-            self.memory = Memory(replay_memory_size, batch_size)
-        
+            if self.per == True:
+                self.memory = PERMemory(replay_memory_size, batch_size)
+            else:
+                self.memory = Memory(replay_memory_size, batch_size)
+
         # Checkpoint saving parameters
         self.save_path = save_path
         self.save_every = save_every
@@ -151,7 +156,10 @@ class DQNAgent(object):
         if not self.training_mode:
             return
         (state, action, reward, next_state, done) = tuple(ts)
-        self.feed_memory(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
+        if self.per == True:
+            self.feed_memory_per(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
+        else:
+            self.feed_memory(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
         tmp = self.total_t - self.replay_memory_init_size
         if tmp>=0 and tmp%self.train_every == 0:
             self.train()
@@ -213,7 +221,7 @@ class DQNAgent(object):
         Returns:
             q_values (numpy.array): a 1-d array where each entry represents a Q value
         '''
-        
+
         q_values = self.q_estimator.predict_nograd(np.expand_dims(state['obs'], 0))[0]
         masked_q_values = -np.inf * np.ones(self.num_actions, dtype=float)
         #print('DQN agent legal actions', state['legal_actions'])
@@ -235,9 +243,27 @@ class DQNAgent(object):
         '''
         if self.training_mode == False:
             return
-        state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = self.memory.sample()
+
+        if self.per == True:
+            tree_idx, transitions = self.memory.sample()
+            # Transitions is a list of 6-value tuples. Length of list is equal to batch_size.
+            # Each tuple contains (state, action, reward, next_state, done, legal_actions)
+            # The code below converts this to a tuple of 6 lists, each of length batch_size
+
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = zip(*transitions)
+            state_batch = np.array(state_batch)
+            action_batch = np.array(action_batch)
+            reward_batch = np.array(reward_batch)
+            next_state_batch = np.array(next_state_batch)
+            done_batch = np.array(done_batch)
+
+            # import pdb;
+            # pdb.set_trace()
+        else:
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = self.memory.sample()
 
         # Calculate best next actions using Q-network (Double DQN)
+        q_values_old = self.q_estimator.predict_nograd(state_batch)
         q_values_next = self.q_estimator.predict_nograd(next_state_batch)
         legal_actions = []
         for b in range(self.batch_size):
@@ -258,16 +284,25 @@ class DQNAgent(object):
         loss = self.q_estimator.update(state_batch, action_batch, target_batch)
         print('\rINFO - Step {}, rl-loss: {}'.format(self.total_t, loss), end='')
 
+        if self.per == True:
+            indices = np.arange(self.batch_size, dtype=np.int32)
+            # pick q_values_old at indices of best_actions
+            q_values_old_best = q_values_old[indices, best_actions]
+
+            absolute_errors = np.abs(q_values_old_best - target_batch)
+            # Update priority
+            self.memory.batch_update(tree_idx, absolute_errors)
+
         self.train_t += 1
 
         # Update the target estimator
-        if self.train_t % self.update_target_estimator_every == 0: 
+        if self.train_t % self.update_target_estimator_every == 0:
             # this could maybe be eliminated with the soft update set to 0.001
             self.target_estimator.soft_update_from(self.q_estimator, 0.01)
             print("\nINFO - Copied model parameters to target network.")
 
         if self.save_path and self.train_t % self.save_every == 0:
-            # To preserve every checkpoint separately, 
+            # To preserve every checkpoint separately,
             # add another argument to the function call parameterized by self.train_t
             self.save_checkpoint(self.save_path)
             print("\nINFO - Saved model checkpoint.")
@@ -277,6 +312,20 @@ class DQNAgent(object):
         ''' Feed transition to memory
 
         Args:
+            state (numpy.array): the current state
+            action (int): the performed action ID
+            reward (float): the reward received
+            next_state (numpy.array): the next state after performing the action
+            legal_actions (list): the legal actions of the next state
+            done (boolean): whether the episode is finished
+        '''
+        self.memory.save(state, action, reward, next_state, legal_actions, done)
+
+    def feed_memory_per(self, state, action, reward, next_state, legal_actions, done):
+        ''' Feed transition to PER memory
+
+        Args:
+            error (float): the TD error of the transition
             state (numpy.array): the current state
             action (int): the performed action ID
             reward (float): the reward received
@@ -297,7 +346,7 @@ class DQNAgent(object):
         Checkpoint attributes are used to save and restore the model in the middle of training
         Saves the model state dict, optimizer state dict, and all other instance variables
         '''
-        
+
         return {
             'agent_type': 'DQNAgent',
             'q_estimator': self.q_estimator.checkpoint_attributes(),
@@ -314,16 +363,16 @@ class DQNAgent(object):
             'train_every': self.train_every,
             'device': self.device,
         }
-        
+
     @classmethod
     def from_checkpoint(cls, checkpoint):
         '''
         Restore the model from a checkpoint
-        
+
         Args:
             checkpoint (dict): the checkpoint attributes generated by checkpoint_attributes()
         '''
-        
+
         print("\nINFO - Restoring model from checkpoint...")
         agent_instance = cls(
             replay_memory_size=checkpoint['memory']['memory_size'],
@@ -333,23 +382,23 @@ class DQNAgent(object):
             epsilon_end=checkpoint['epsilon_end'],
             epsilon_decay_steps=checkpoint['epsilon_decay_steps'],
             batch_size=checkpoint['batch_size'],
-            num_actions=checkpoint['num_actions'], 
-            device=checkpoint['device'], 
+            num_actions=checkpoint['num_actions'],
+            device=checkpoint['device'],
             state_shape=checkpoint['q_estimator']['state_shape'],
             mlp_layers=checkpoint['q_estimator']['mlp_layers'],
             train_every=checkpoint['train_every'],
         )
-        
+
         agent_instance.total_t = checkpoint['total_t']
         agent_instance.train_t = checkpoint['train_t']
-        
+
         agent_instance.q_estimator = Estimator.from_checkpoint(checkpoint['q_estimator'])
         agent_instance.target_estimator = deepcopy(agent_instance.q_estimator)
         agent_instance.memory = Memory.from_checkpoint(checkpoint['memory'])
-        
-        
+
+
         return agent_instance
-                     
+
     def save_checkpoint(self, path, filename='checkpoint_dqn.pt'):
         ''' Save the model checkpoint (all attributes)
 
@@ -357,7 +406,7 @@ class DQNAgent(object):
             path (str): the path to save the model
         '''
         torch.save(self.checkpoint_attributes(), path + '/' + filename)
-        
+
 class Estimator(object):
     '''
     Approximate clone of rlcard.agents.dqn_agent.Estimator that
@@ -388,7 +437,7 @@ class Estimator(object):
         self.qnet = qnet
         self.qnet.eval()
 
-        
+
         if params is not None:
             self.qnet.load_state_dict(params)
         else:
@@ -456,6 +505,7 @@ class Estimator(object):
         self.qnet.eval()
 
         return batch_loss
+
     def soft_update_from(self, estimator, tau):
         ''' Soft update the model parameters from estimator
 
@@ -465,7 +515,7 @@ class Estimator(object):
         '''
         for target_param, param in zip(self.qnet.parameters(), estimator.qnet.parameters()):
             target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
-    
+
     def checkpoint_attributes(self):
         ''' Return the attributes needed to restore the model from a checkpoint
         '''
@@ -478,7 +528,7 @@ class Estimator(object):
             'mlp_layers': self.mlp_layers,
             'device': self.device
         }
-        
+
     @classmethod
     def from_checkpoint(cls, checkpoint):
         ''' Restore the model from a checkpoint
@@ -490,7 +540,7 @@ class Estimator(object):
             mlp_layers=checkpoint['mlp_layers'],
             device=checkpoint['device']
         )
-        
+
         estimator.qnet.load_state_dict(checkpoint['qnet'])
         estimator.optimizer.load_state_dict(checkpoint['optimizer'])
         return estimator
@@ -533,7 +583,7 @@ class EstimatorNetwork(nn.Module):
         '''
         return self.fc_layers(s)
 
-    
+
 
 class Memory(object):
     ''' Memory for saving transitions
@@ -567,7 +617,7 @@ class Memory(object):
     def sample(self):
         ''' Sample a minibatch from the replay memory
 
-        Returns:       
+        Returns:
             state_batch (list): a batch of states
             action_batch (list): a batch of actions
             reward_batch (list): a batch of rewards
@@ -581,25 +631,183 @@ class Memory(object):
     def checkpoint_attributes(self):
         ''' Returns the attributes that need to be checkpointed
         '''
-        
+
         return {
             'memory_size': self.memory_size,
             'batch_size': self.batch_size,
             'memory': self.memory
         }
-            
+
     @classmethod
     def from_checkpoint(cls, checkpoint):
-        ''' 
+        '''
         Restores the attributes from the checkpoint
-        
+
         Args:
             checkpoint (dict): the checkpoint dictionary
-            
+
         Returns:
             instance (Memory): the restored instance
         '''
-        
+
         instance = cls(checkpoint['memory_size'], checkpoint['batch_size'])
         instance.memory = checkpoint['memory']
         return instance
+
+class SumTree(object):
+    data_pointer = 0
+
+    # Here we initialize the tree with all nodes = 0, and initialize the data with all values = 0
+    def __init__(self, capacity):
+        # Number of leaf nodes (final nodes) that contains experiences
+        self.capacity = capacity
+
+        # Generate the tree with all nodes values = 0
+        # To understand this calculation (2 * capacity - 1) look at the schema below
+        # Remember we are in a binary node (each node has max 2 children) so 2x size of leaf (capacity) - 1 (root node)
+        # Parent nodes = capacity - 1
+        # Leaf nodes = capacity
+        self.tree = np.zeros(2 * capacity - 1)
+
+        # Contains the experiences (so the size of data is capacity)
+        self.data = np.zeros(capacity, dtype=object)
+
+
+    # Here we define function that will add our priority score in the sumtree leaf and add the experience in data:
+    def add(self, priority, data):
+        # Look at what index we want to put the experience
+        tree_index = self.data_pointer + self.capacity - 1
+
+        # Update data frame
+        self.data[self.data_pointer] = data
+
+        # Update the leaf
+        self.update (tree_index, priority)
+
+        # Add 1 to data_pointer
+        self.data_pointer += 1
+
+        if self.data_pointer >= self.capacity:  # If we're above the capacity, we go back to first index (we overwrite)
+            self.data_pointer = 0
+
+    # Update the leaf priority score and propagate the change through tree
+    def update(self, tree_index, priority):
+        # Change = new priority score - former priority score
+        change = priority - self.tree[tree_index]
+        self.tree[tree_index] = priority
+
+        # then propagate the change through tree
+        # this method is faster than the recursive loop in the reference code
+        while tree_index != 0:
+            tree_index = (tree_index - 1) // 2
+            self.tree[tree_index] += change
+
+    # Here build a function to get a leaf from our tree. So we'll build a function to get the leaf_index, priority value of that leaf and experience associated with that leaf index:
+    def get_leaf(self, v):
+        parent_index = 0
+
+        # the while loop is faster than the method in the reference code
+        while True:
+            left_child_index = 2 * parent_index + 1
+            right_child_index = left_child_index + 1
+
+            # If we reach bottom, end the search
+            if left_child_index >= len(self.tree):
+                leaf_index = parent_index
+                break
+            else: # downward search, always search for a higher priority node
+                if v <= self.tree[left_child_index]:
+                    parent_index = left_child_index
+                else:
+                    v -= self.tree[left_child_index]
+                    parent_index = right_child_index
+
+        data_index = leaf_index - self.capacity + 1
+
+        return leaf_index, self.tree[leaf_index], self.data[data_index]
+
+    @property
+    def total_priority(self):
+        return self.tree[0] # Returns the root node
+
+    def checkpoint_attributes(self):
+        ''' Returns the attributes that need to be checkpointed
+        '''
+
+        return {
+            'capacity': self.capacity,
+            'data_pointer': self.data_pointer,
+            'tree': self.tree,
+            'data': self.data
+        }
+
+class PERMemory:
+    epsilon = 0.01  # Small constant to ensure every sample can be taken
+    alpha = 0.6     # Controls the randomness vs. prioritization trade-off
+    beta = 0.4      # Importance sampling weight
+
+    def __init__(self, memory_size, batch_size):
+        self.tree = SumTree(memory_size)
+        self.memory_size = memory_size
+        self.batch_size = batch_size
+
+    def _get_priority(self, error):
+        return (error + self.epsilon) ** self.alpha
+
+    def save(self, state, action, reward, next_state, legal_actions, done):
+
+        # Find the max priority
+        max_priority = np.max(self.tree.tree[-self.tree.capacity:])
+
+        # If the max priority = 0 we can't put priority = 0 since this experience will never have a chance to be selected
+        # So we use a minimum priority
+        if max_priority == 0:
+            max_priority = 1.0
+
+        data = Transition(state, action, reward, next_state, done, legal_actions)
+        self.tree.add(max_priority, data)   # set the max priority for new priority
+
+    def sample(self):
+        # Create a minibatch array that will contains the minibatch
+        minibatch = []
+        n = self.batch_size
+
+        b_idx = np.empty((n,), dtype=np.int32)
+
+        # Calculate the priority segment
+        # Here, as explained in the paper, we divide the Range[0, ptotal] into n ranges
+        priority_segment = self.tree.total_priority / n
+
+        for i in range(n):
+            # A value is uniformly sampled from each range
+            a, b = priority_segment * i, priority_segment * (i + 1)
+            value = np.random.uniform(a, b)
+
+            # Experience that correspond to each value is retrieved
+            index, priority, data = self.tree.get_leaf(value)
+
+            b_idx[i] = index
+            minibatch.append(data)
+
+        return b_idx, minibatch
+
+    def batch_update(self, tree_idx, abs_errors):
+        abs_errors += self.epsilon  # convert to abs and avoid 0
+        clipped_errors = np.minimum(abs_errors, 1.)
+        ps = np.power(clipped_errors, self.alpha)
+
+        for ti, p in zip(tree_idx, ps):
+            self.tree.update(ti, p)
+
+    def checkpoint_attributes(self):
+        ''' Returns the attributes that need to be checkpointed
+        '''
+
+        return {
+            'memory_size': self.memory_size,
+            'batch_size': self.batch_size,
+            'memory': self.tree.checkpoint_attributes()
+        }
+
+# I have started following this approach: https://pylessons.com/CartPole-PER
+# see related code https://github.com/pythonlessons/Reinforcement_Learning/blob/master/05_CartPole-reinforcement-learning_PER_D3QN/Cartpole_PER_D3QN_TF2.py#L183

@@ -3,6 +3,9 @@ import argparse
 import yaml
 
 import torch
+from datetime import datetime
+import random
+import string
 
 import rlcard
 from rlcard.agents import RandomAgent, DQNAgent, NFSPAgent
@@ -14,6 +17,8 @@ from rlcard.utils import (
     Logger,
     plot_curve,
 )
+
+torch.set_num_threads(2)
 
 def load_agent_from_checkpoint(checkpoint_data):
     agent_class = getattr(rlcard.agents, checkpoint_data['agent_type'])
@@ -39,7 +44,7 @@ def load_model(model, env, position=None, device=None):
     else:  # A model in the model zoo
         from rlcard import models
         agent = models.load(model).agents[position]
-    
+
     return agent
 
 
@@ -49,7 +54,18 @@ defaults = {
     'num_eval_games': 100,
 }
 
+
+# log dir as experiments/<date>/<HH-mm>-<experiment_id>/<stage_name>
+def get_log_dir(experiment_id, stage_name):
+    return os.path.join(
+        'experiments',
+        datetime.now().strftime('%Y-%m-%d'),
+        datetime.now().strftime('%H-%M') + '-' + experiment_id,
+        stage_name
+    )
+
 def train_pipeline(pipeline_config):
+    experiment_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=3))
     # Load pipeline configuration from the YAML file
     with open(pipeline_config, 'r') as file:
         config = yaml.safe_load(file)
@@ -66,8 +82,8 @@ def train_pipeline(pipeline_config):
 
     # Make the environment
     env = rlcard.make(config['env']['name'])
-    
-    # Initialize the agent    
+
+    # Initialize the agent
     if 'checkpoint_path' in config['agent']:
         print(f"Loading agent from checkpoint: {config['agent']['checkpoint_path']}")
         print(f"Configuration parameters will be ignored.")
@@ -96,24 +112,33 @@ def train_pipeline(pipeline_config):
         current_config.update(stage)
         # Set adverse agents
         adverse_agents = []
+        log_dir = get_log_dir(experiment_id, stage['name'])
+        # create the log directory if it doesn't exist
+        os.makedirs(log_dir, exist_ok=True)
+
         for i, adv_agent in enumerate(stage['adverse_agents']):
             adv_agent = load_model(adv_agent['algorithm'], env=env, device=device, position=i + 1)
             adverse_agents.append(adv_agent)
-            
+
         if 'agent_parameters' in stage:
             for key, value in stage['agent_parameters'].items():
                 setattr(agent, key, value)
+
+        setattr(agent, 'save_path', log_dir)
 
         # Set the environment parameters and agents
         env.set_agents([agent] + adverse_agents)
         env.set_game_config(stage['env'])
 
+
+        # Set the log directory
+
         # Start training
-        with Logger(current_config['log_dir']) as logger:
+        with Logger(log_dir) as logger:
             for episode in range(current_config['num_episodes']):
                 if print_current_episode:
                     print(f'Current episode: {episode}')
-                
+
                 # Generate data from the environment
                 trajectories, payoffs = env.run(is_training=True)
 
@@ -130,7 +155,7 @@ def train_pipeline(pipeline_config):
                     logger.log_performance(episode,tournament_payoffs[0])
                     if tournament_payoffs[0] > best_reward:
                         best_reward = tournament_payoffs[0]
-                        agent.save_checkpoint(current_config['log_dir'], 'best_model.pt')
+                        agent.save_checkpoint(log_dir, 'best_model.pt')
                         print('Model saved in episode #{} with reward {}'.format(episode, best_reward))
 
         # Get the paths

@@ -1,4 +1,5 @@
 ''' An example of evluating the trained models in RLCard
+python3 examples/evaluate.py --env uno2 --models best_model.pt,uno-rule-v2
 '''
 import os
 import argparse
@@ -13,12 +14,15 @@ from rlcard.utils import (
     set_seed,
     tournament,
 )
+import torch
+
 
 def load_model(model_path, env=None, position=None, device=None):
     if os.path.isfile(model_path):  # Torch model
-        import torch
-        agent = torch.load(model_path, map_location=device)
-        agent.set_device(device)
+        checkpoint = torch.load(model_path, map_location=device)
+        print('>> Loading checkpoint from', model_path)
+        agent = DQNAgent.from_checkpoint(checkpoint)
+        agent.training_mode = False
     elif os.path.isdir(model_path):  # CFR model
         from rlcard.agents import CFRAgent
         agent = CFRAgent(env, model_path)
@@ -27,16 +31,16 @@ def load_model(model_path, env=None, position=None, device=None):
         from rlcard.agents import RandomAgent
         agent = RandomAgent(num_actions=env.num_actions)
     else:  # A model in the model zoo
+        print('>> Loading model from zoo:', model_path)
         from rlcard import models
         agent = models.load(model_path).agents[position]
-    
+
     return agent
 
 def evaluate(args):
-
     # Check whether gpu is available
     device = get_device()
-        
+
     # Seed numpy, torch, random
     set_seed(args.seed)
 
@@ -93,7 +97,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--num_games',
         type=int,
-        default=10000,
+        default=1000,
     )
 
     args = parser.parse_args()

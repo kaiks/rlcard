@@ -1,3 +1,4 @@
+# python3 examples/training_pipeline.py --pipeline_config examples/pipelines/uno2.yml
 import os
 import argparse
 import yaml
@@ -56,16 +57,19 @@ defaults = {
 
 
 # log dir as experiments/<date>/<HH-mm>-<experiment_id>/<stage_name>
-def get_log_dir(experiment_id, stage_name):
+def get_log_dir(starting_date, starting_time, experiment_id, stage_name):
     return os.path.join(
         'experiments',
-        datetime.now().strftime('%Y-%m-%d'),
-        datetime.now().strftime('%H-%M') + '-' + experiment_id,
+        starting_date,
+        starting_time + '-' + experiment_id,
         stage_name
     )
 
 def train_pipeline(pipeline_config):
     experiment_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=3))
+    print(f"Experiment ID: {experiment_id}")
+    starting_date = datetime.now().strftime('%Y-%m-%d')
+    starting_time = datetime.now().strftime('%H-%M')
     # Load pipeline configuration from the YAML file
     with open(pipeline_config, 'r') as file:
         config = yaml.safe_load(file)
@@ -87,7 +91,7 @@ def train_pipeline(pipeline_config):
     if 'checkpoint_path' in config['agent']:
         print(f"Loading agent from checkpoint: {config['agent']['checkpoint_path']}")
         print(f"Configuration parameters will be ignored.")
-        agent = load_model(config['agent']['checkpoint_path'], env, device=device)
+        agent = load_model(config['agent']['checkpoint_path'], env, device=device, position=0)
     elif config['agent']['algorithm'] == 'dqn':
         agent = DQNAgent(
             num_actions=env.num_actions,
@@ -112,7 +116,7 @@ def train_pipeline(pipeline_config):
         current_config.update(stage)
         # Set adverse agents
         adverse_agents = []
-        log_dir = get_log_dir(experiment_id, stage['name'])
+        log_dir = get_log_dir(starting_date, starting_time, experiment_id, stage['name'])
         # create the log directory if it doesn't exist
         os.makedirs(log_dir, exist_ok=True)
 
@@ -136,7 +140,7 @@ def train_pipeline(pipeline_config):
         # Start training
         with Logger(log_dir) as logger:
             for episode in range(current_config['num_episodes']):
-                if print_current_episode:
+                if print_current_episode and episode % 100 == 0:
                     print(f'Current episode: {episode}')
 
                 # Generate data from the environment

@@ -282,7 +282,8 @@ class DQNAgent(object):
         state_batch = np.array(state_batch)
 
         loss = self.q_estimator.update(state_batch, action_batch, target_batch)
-        print('\rINFO - Step {}, rl-loss: {}'.format(self.total_t, loss), end='')
+        if self.debug:
+            print('\rINFO - Step {}, rl-loss: {}'.format(self.total_t, loss), end='')
 
         if self.per == True:
             indices = np.arange(self.batch_size, dtype=np.int32)
@@ -353,8 +354,8 @@ class DQNAgent(object):
             'memory': self.memory.checkpoint_attributes(),
             'total_t': self.total_t,
             'train_t': self.train_t,
-            'epsilon_start': self.epsilons.min(),
-            'epsilon_end': self.epsilons.max(),
+            'epsilon_start': self.epsilons.max(),
+            'epsilon_end': self.epsilons.min(),
             'epsilon_decay_steps': self.epsilon_decay_steps,
             'discount_factor': self.discount_factor,
             'update_target_estimator_every': self.update_target_estimator_every,
@@ -374,6 +375,22 @@ class DQNAgent(object):
         '''
 
         print("\nINFO - Restoring model from checkpoint...")
+        print("\nINFO - Checkpoint attributes:")
+        for k, v in checkpoint.items():
+            # if it's an array, then print the shape
+            if isinstance(v, np.ndarray):
+                print("\nINFO - {} : {}".format(k, v.shape))
+            # if it's a dict, then print the keys
+            elif isinstance(v, dict):
+                print("\nINFO - {} : {}".format(k, v.keys()))
+                # if it has a key called mlp_layers, print it as well
+                if 'mlp_layers' in v.keys():
+                    print("\nINFO - {} : {}".format(k, v['mlp_layers']))
+            else:
+                # print class first
+                print("\nINFO - {} : {}".format(k, type(v)))
+                print("\nINFO - {} : {}".format(k, v))
+
         agent_instance = cls(
             replay_memory_size=checkpoint['memory']['memory_size'],
             update_target_estimator_every=checkpoint['update_target_estimator_every'],
@@ -394,7 +411,8 @@ class DQNAgent(object):
 
         agent_instance.q_estimator = Estimator.from_checkpoint(checkpoint['q_estimator'])
         agent_instance.target_estimator = deepcopy(agent_instance.q_estimator)
-        agent_instance.memory = Memory.from_checkpoint(checkpoint['memory'])
+        # TODO: pick memory class based on checkpoint
+        agent_instance.memory = PERMemory.from_checkpoint(checkpoint['memory'])
 
 
         return agent_instance
@@ -741,6 +759,24 @@ class SumTree(object):
             'data': self.data
         }
 
+    @classmethod
+    def from_checkpoint(cls, checkpoint):
+        '''
+        Restores the attributes from the checkpoint
+
+        Args:
+            checkpoint (dict): the checkpoint dictionary
+
+        Returns:
+            instance (Memory): the restored instance
+        '''
+
+        instance = cls(checkpoint['capacity'])
+        instance.data_pointer = checkpoint['data_pointer']
+        instance.tree = checkpoint['tree']
+        instance.data = checkpoint['data']
+        return instance
+
 class PERMemory:
     epsilon = 0.01  # Small constant to ensure every sample can be taken
     alpha = 0.6     # Controls the randomness vs. prioritization trade-off
@@ -808,6 +844,22 @@ class PERMemory:
             'batch_size': self.batch_size,
             'memory': self.tree.checkpoint_attributes()
         }
+
+    @classmethod
+    def from_checkpoint(cls, checkpoint):
+        '''
+        Restores the attributes from the checkpoint
+
+        Args:
+            checkpoint (dict): the checkpoint dictionary
+
+        Returns:
+            instance (Memory): the restored instance
+        '''
+
+        instance = cls(checkpoint['memory_size'], checkpoint['batch_size'])
+        instance.tree = SumTree.from_checkpoint(checkpoint['memory'])
+        return instance
 
 # I have started following this approach: https://pylessons.com/CartPole-PER
 # see related code https://github.com/pythonlessons/Reinforcement_Learning/blob/master/05_CartPole-reinforcement-learning_PER_D3QN/Cartpole_PER_D3QN_TF2.py#L183

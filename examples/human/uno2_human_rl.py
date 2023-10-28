@@ -1,4 +1,5 @@
 ''' A toy example of playing against rule-based bot on UNO
+python3 examples/human/uno2_human_rl.py --load_model_path best_model.pt
 '''
 
 import os
@@ -30,10 +31,10 @@ device = get_device()
 # if model path includes 'dqn', then use DQNAgent, otherwise use NFSPAgent
 checkpoint = torch.load(args.load_model_path, map_location=device)
 
-if 'dqn' in args.load_model_path:
-    rl_agent = DQNAgent.from_checkpoint(checkpoint)
-else:
+if 'nfsp' in args.load_model_path:
     rl_agent = NFSPAgent.from_checkpoint(checkpoint)
+else:
+    rl_agent = DQNAgent.from_checkpoint(checkpoint)
 del checkpoint
 
 env.set_agents([

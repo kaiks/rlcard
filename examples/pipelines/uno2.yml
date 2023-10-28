@@ -9,17 +9,18 @@ pipeline:
   print_current_episode_info: true
 agent:
   algorithm: dqn
-  # checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
+#  checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
+  # checkpoint_path: uno-rule-v2
   parameters:
     learning_rate: 0.0001
     discount_factor: 0.99
     update_target_estimator_every: 100
-    mlp_layers: [120, 120, 120, 120, 120, 120]
+    mlp_layers: [240, 60, 60, 60, 60, 60, 60]
     replay_memory_size: 10000
     replay_memory_init_size: 1000
     batch_size: 256
     epsilon_end: 0.0001
-    epsilon_decay_steps: 8000000
+    epsilon_decay_steps: 80000000
 env:
   name: uno2
   no_starting_cards: 7
@@ -28,7 +29,7 @@ stages:
     adverse_agents:
       - algorithm: uno-rule-v2
     env:
-      no_starting_cards: 1
+      starting_cards: 1
     num_episodes: 10000
     num_eval_games: 100
     evaluate_every: 1000
@@ -40,7 +41,7 @@ stages:
     adverse_agents:
       - algorithm: uno-rule-v2
     env:
-      no_starting_cards: 7
+      starting_cards: 7
     num_episodes: 1000000
     num_eval_games: 1000
     evaluate_every: 10000

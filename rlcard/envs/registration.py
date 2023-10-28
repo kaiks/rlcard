@@ -85,5 +85,4 @@ def make(env_id, config={}):
     _config = DEFAULT_CONFIG.copy()
     for key in config:
         _config[key] = config[key]
-
     return registry.make(env_id, _config)

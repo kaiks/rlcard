@@ -35,7 +35,7 @@ register(
 
 register(
     env_id='uno2',
-    entry_point='rlcard.envs.uno2:UnoEnv',
+    entry_point='rlcard.envs.uno2:Uno2Env',
 )
 
 register(

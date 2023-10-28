@@ -1,5 +1,4 @@
 import numpy as np
-#import pdb
 
 from rlcard.games.base import Card
 
@@ -27,7 +26,7 @@ def get_device():
         device = torch.device("cpu")
         print("--> Running on the CPU")
 
-    return device    
+    return device
 
 def init_standard_deck():
     ''' Initialize a standard deck of 52 cards
@@ -192,7 +191,7 @@ def reorganize(trajectories, payoffs):
             new_transition = [state, action, reward, next_state, done]
             # Add the new transition to the player's new trajectory
             new_trajectories[player].append(new_transition)
-            
+
     return new_trajectories
 
 def remove_illegal(action_probs, legal_actions):

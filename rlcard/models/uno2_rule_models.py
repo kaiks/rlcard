@@ -26,15 +26,15 @@ class UNORuleAgentV2(object):
         legal_actions = state['raw_legal_actions']
         state = state['raw_obs']
         hand = state['hand']
-        
+
         #print(f'Legal actions: {legal_actions}')
-        
+
         legal_actions_except_draw_and_pass = [action for action in legal_actions if action not in ['draw', 'pass']]
         chain = self.longest_chain(hand, legal_actions_except_draw_and_pass, state['target'])
         # print hand and chain
         #print(f'Hand: {hand}')
         #print(f'Chain: {chain}')
-        
+
         if chain:
             return chain[0]
         else:
@@ -46,7 +46,7 @@ class UNORuleAgentV2(object):
         ''' Step for evaluation. The same to step
         '''
         return self.step(state), []
-    
+
     def longest_chain(self, hand, starting_legal_actions, top_card):
         ''' Find the longest chain of playable cards in hand
 
@@ -98,7 +98,7 @@ class UNORuleAgentV2(object):
         is_playable = card[0] == top_card[0] or (card[2] == top_card[2] and not card[2] == 'w') or card[2:6] == 'wild'
         # print(f'Comparison components: {card[0]} == {top_card[0]} or {card[2]} == {top_card[2]} or {card[2:6]} == "wild"')
         # print(f'Card: {card}, Top card: {top_card}, Playable: {is_playable}')
-        
+
         return is_playable
 
 class UNORuleModelV2(Model):
@@ -108,7 +108,7 @@ class UNORuleModelV2(Model):
     def __init__(self):
         ''' Load pretrained model
         '''
-        env = rlcard.make('uno')
+        env = rlcard.make('uno2')
 
         rule_agent = UNORuleAgentV2()
         self.rule_agents = [rule_agent for _ in range(env.num_players)]

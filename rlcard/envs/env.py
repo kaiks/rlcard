@@ -84,7 +84,7 @@ class Env(object):
             # map each card using get_str()
             cards = [UnoCard.get_str(card) for card in cards]
             print(f"Player hand", UnoCard.print_cards(cards))
-        
+
         self.timestep += 1
         # Record the action for human interface
         self.action_recorder.append((player, action))
@@ -123,19 +123,21 @@ class Env(object):
             agents (list): List of Agent classes
         '''
         self.agents = agents
-        
+
     def set_game_config(self, config):
         '''
         Set the configuration of the environment
-        
+
         Args:
             config (dict): A dictionary of configuration
         '''
-        
+
         _game_config = self.default_game_config.copy()
         for key in config:
             if key in _game_config:
                 _game_config[key] = config[key]
+            else:
+                raise KeyError('{} is not a valid configuration in {}.'.format(key, self.name))
         self.game.configure(_game_config)
 
     def run(self, is_training=False):

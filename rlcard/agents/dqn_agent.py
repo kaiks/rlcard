@@ -257,8 +257,6 @@ class DQNAgent(object):
             next_state_batch = np.array(next_state_batch)
             done_batch = np.array(done_batch)
 
-            # import pdb;
-            # pdb.set_trace()
         else:
             state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = self.memory.sample()
 

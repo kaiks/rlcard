@@ -9,13 +9,15 @@ from rlcard.games.uno2.utils import cards2list
 
 DEFAULT_GAME_CONFIG = {
         'game_num_players': 2,
-        'starting_cards': 7
+        'starting_cards': 7,
+        'allow_step_back': False,
+        'seed': None
         }
 
-class UnoEnv(Env):
+class Uno2Env(Env):
 
     def __init__(self, config):
-        self.name = 'uno'
+        self.name = 'uno2'
         self.default_game_config = DEFAULT_GAME_CONFIG
         self.game = Game()
         super().__init__(config)

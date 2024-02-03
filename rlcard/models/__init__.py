@@ -23,6 +23,14 @@ register(
     entry_point='rlcard.models.uno2_rule_models:UNORuleModelV2')
 
 register(
+    model_id='uno-rule-v3',
+    entry_point='rlcard.models.uno2_rule_models:UNORuleModelV3')
+
+register(
+    model_id='uno-airule-v1',
+    entry_point='rlcard.models.uno2_ai_models:UNOAIRuleModelV1')
+
+register(
     model_id = 'limit-holdem-rule-v1',
     entry_point='rlcard.models.limitholdem_rule_models:LimitholdemRuleModelV1')
 

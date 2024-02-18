@@ -249,14 +249,12 @@ class DQNAgent(object):
             # Transitions is a list of 6-value tuples. Length of list is equal to batch_size.
             # Each tuple contains (state, action, reward, next_state, done, legal_actions)
             # The code below converts this to a tuple of 6 lists, each of length batch_size
-
-            state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = zip(*transitions)
-            state_batch = np.array(state_batch)
-            action_batch = np.array(action_batch)
-            reward_batch = np.array(reward_batch)
-            next_state_batch = np.array(next_state_batch)
-            done_batch = np.array(done_batch)
-
+            state_batch = np.array([t.state for t in transitions])
+            action_batch = np.array([t.action for t in transitions])
+            reward_batch = np.array([t.reward for t in transitions])
+            next_state_batch = np.array([t.next_state for t in transitions])
+            done_batch = np.array([t.done for t in transitions])
+            legal_actions_batch = [t.legal_actions for t in transitions]  # This remains a list of lists
         else:
             state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = self.memory.sample()
 
@@ -584,7 +582,8 @@ class EstimatorNetwork(nn.Module):
         # build the Q network
         layer_dims = [np.prod(self.state_shape)] + self.mlp_layers
         fc = [nn.Flatten()]
-        fc.append(nn.BatchNorm1d(layer_dims[0]))
+        # Why is this normalization only in the first layer?
+        # fc.append(nn.BatchNorm1d(layer_dims[0]))
         for i in range(len(layer_dims)-1):
             fc.append(nn.Linear(layer_dims[i], layer_dims[i+1], bias=True))
             fc.append(nn.ReLU())  # Replaced Tanh with ReLU

@@ -9,90 +9,128 @@ pipeline:
   print_current_episode_info: true
 agent:
   algorithm: dqn
-#  checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
-  # checkpoint_path: uno-rule-v2
   parameters:
-    learning_rate: 0.0001
+    learning_rate: 0.0003
     discount_factor: 0.99
-    update_target_estimator_every: 100
-    mlp_layers: [240, 60, 60, 60, 60, 60, 60]
-    replay_memory_size: 10000
-    replay_memory_init_size: 1000
-    batch_size: 256
+    update_target_estimator_every: 1
+    mlp_layers: [180, 180, 180, 180, 180, 180]
+    replay_memory_size: 50000
+    replay_memory_init_size: 2048
+    batch_size: 512
     epsilon_end: 0.0001
-    epsilon_decay_steps: 80000000
+    epsilon_decay_steps: 1000000
 env:
   name: uno2
   no_starting_cards: 7
+  seed: 0
 stages:
   - name: stage1
     adverse_agents:
       - algorithm: uno-rule-v2
     env:
-      starting_cards: 1
-    num_episodes: 10000
+      starting_cards: 3
+    num_episodes: 500000
     num_eval_games: 100
     evaluate_every: 1000
     agent_parameters:
       save_path: experiments/
       save_every: 5000
     log_dir: experiments/
-  - name: stage2
-    adverse_agents:
-      - algorithm: uno-rule-v2
-    env:
-      starting_cards: 7
-    num_episodes: 1000000
-    num_eval_games: 1000
-    evaluate_every: 10000
-    agent_parameters:
-      save_path: experiments/
-      save_every: 10000
-      discount_factor: 0.9
-    log_dir: experiments/
+# info:
+#   name: uno2
+#   version: 0.1
+#   description: uno pipeline
+#   authors:
+#     - name: Karol Lewcio
+#       github: kaiks
+# pipeline:
+#   print_current_episode_info: true
+# agent:
+#   algorithm: dqn
+# #  checkpoint_path: experiments/dqn_04_20_v2/checkpoint_dqn.pt
+#   # checkpoint_path: uno-rule-v2
+#   parameters:
+#     learning_rate: 0.0001
+#     discount_factor: 0.99
+#     update_target_estimator_every: 100
+#     mlp_layers: [180, 180, 180, 180, 180, 180]
+#     replay_memory_size: 50000
+#     replay_memory_init_size: 1000
+#     batch_size: 512
+#     epsilon_end: 0.0001
+#     epsilon_decay_steps: 80000000
+# env:
+#   name: uno2
+#   no_starting_cards: 7
+# stages:
+#   - name: stage1
+#     adverse_agents:
+#       - algorithm: uno-airule-v1
+#     env:
+#       starting_cards: 1
+#     num_episodes: 500000
+#     num_eval_games: 100
+#     evaluate_every: 1000
+#     agent_parameters:
+#       save_path: experiments/
+#       save_every: 5000
+#     log_dir: experiments/
+#   - name: stage2
+#     adverse_agents:
+#       - algorithm: uno-airule-v1
+#     env:
+#       starting_cards: 7
+#     num_episodes: 5000000
+#     num_eval_games: 1000
+#     evaluate_every: 10000
+#     agent_parameters:
+#       save_path: experiments/
+#       save_every: 10000
+#       discount_factor: 0.8
+#     log_dir: experiments/
 
-  # - name: stage3
-  #   agent_parameters:
-  #     train_t: 0
-  #     total_t: 0
-  #     save_path: experiments/dqn_04_20_2_v3
-  #     save_every: 5000
-  #     discount_factor: 0.99
-  #   adverse_agents:
-  #     - algorithm: random
-  #   env:
-  #     no_starting_cards: 3
-  #   num_episodes: 100000
-  #   evaluate_every: 1000
-  #   log_dir: experiments/dqn_04_20_2_v3
+#   # - name: stage3
+#   #   agent_parameters:
+#   #     train_t: 0
+#   #     total_t: 0
+#   #     save_path: experiments/dqn_04_20_2_v3
+#   #     save_every: 5000
+#   #     discount_factor: 0.99
+#   #   adverse_agents:
+#   #     - algorithm: random
+#   #   env:
+#   #     no_starting_cards: 3
+#   #   num_episodes: 100000
+#   #   evaluate_every: 1000
+#   #   log_dir: experiments/dqn_04_20_2_v3
 
-  # - name: stage4
-  #   adverse_agents:
-  #     - algorithm: uno-rule-v2
-  #   env:
-  #     no_starting_cards: 3
-  #   evaluate_every: 10000
-  #   num_eval_games: 1000
-  #   num_episodes: 500000
-  #   log_dir: experiments/dqn_04_20_2_v4
-  #   agent_parameters:
-  #     save_path: experiments/dqn_04_20_2_v4
-  #     save_every: 5000
-  #     learning_rate: 0.001
-  #     total_t: 0
-  #     train_t: 0
+#   # - name: stage4
+#   #   adverse_agents:
+#   #     - algorithm: uno-rule-v2
+#   #   env:
+#   #     no_starting_cards: 3
+#   #   evaluate_every: 10000
+#   #   num_eval_games: 1000
+#   #   num_episodes: 500000
+#   #   log_dir: experiments/dqn_04_20_2_v4
+#   #   agent_parameters:
+#   #     save_path: experiments/dqn_04_20_2_v4
+#   #     save_every: 5000
+#   #     learning_rate: 0.001
+#   #     total_t: 0
+#   #     train_t: 0
 
 
-  # - name: stage5
-  #   adverse_agents:
-  #     - algorithm: uno-rule-v2
-  #   env:
-  #     no_starting_cards: 7
-  #   evaluate_every: 10000
-  #   num_eval_games: 1000
-  #   num_episodes: 500000
-  #   log_dir: experiments/dqn_04_20_2_v5
-  #   agent_parameters:
-  #     save_path: experiments/dqn_04_20_2_v5
-  #     save_every: 5000
-  #     learning_rate: 0.0001
+#   # - name: stage5
+#   #   adverse_agents:
+#   #     - algorithm: uno-rule-v2
+#   #   env:
+#   #     no_starting_cards: 7
+#   #   evaluate_every: 10000
+#   #   num_eval_games: 1000
+#   #   num_episodes: 500000
+#   #   log_dir: experiments/dqn_04_20_2_v5
+#   #   agent_parameters:
+#   #     save_path: experiments/dqn_04_20_2_v5
+#   #     save_every: 5000
+#   #     learning_rate: 0.0001
